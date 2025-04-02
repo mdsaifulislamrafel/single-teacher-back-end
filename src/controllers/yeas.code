@@ -1,0 +1,179 @@
+import type { Request, Response } from "express";
+import Video from "../models/Video";
+import Subcategory from "../models/Subcategory";
+import fs from "fs";
+import vdecipher, { VdoCipherQuotaError } from "../config/vdecipher";
+
+interface MulterRequest extends Request {
+  file?: Express.Multer.File;
+}
+
+export const createVideo = async (req: MulterRequest, res: Response) => {
+  if (!req.file) {
+    return res.status(400).json({ error: "Video file is required" });
+  }
+
+  const { title, description, subcategory } = req.body;
+  const filePath = req.file.path;
+
+  // Validate required fields
+  if (!title || !subcategory) {
+    fs.unlinkSync(filePath);
+    return res.status(400).json({ 
+      error: "Validation failed",
+      details: {
+        title: !title ? "Title is required" : undefined,
+        subcategory: !subcategory ? "Subcategory is required" : undefined
+      }
+    });
+  }
+
+  try {
+    // Validate subcategory exists
+    const subcategoryExists = await Subcategory.findById(subcategory);
+    if (!subcategoryExists) {
+      fs.unlinkSync(filePath);
+      return res.status(400).json({ error: "Subcategory not found" });
+    }
+
+    // Get upload info from VdoCipher
+    const uploadInfo = await vdecipher.getUploadInfo(title);
+
+    // Upload the video file to VdoCipher
+    await vdecipher.uploadVideoToVdoCipher(filePath, uploadInfo);
+
+    // Get video details from VdoCipher
+    const videoInfo = await vdecipher.getVideoInfo(uploadInfo.videoId);
+    const duration = videoInfo.duration || 0;
+
+    // Create the video in the database
+    const video = await Video.create({
+      title,
+      description,
+      vdoCipherId: uploadInfo.videoId,
+      duration,
+      subcategory,
+    });
+
+    // Update the Subcategory document
+    await Subcategory.findByIdAndUpdate(subcategory, {
+      $push: { videos: video._id },
+    });
+
+    // Clean up temporary file
+    fs.unlink(filePath, (err) => {
+      if (err) console.error("Error deleting temp file:", err);
+    });
+
+    res.status(201).json(video);
+  } catch (error) {
+    // Clean up the file if there's an error
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+
+    if (error instanceof VdoCipherQuotaError) {
+      try {
+        const currentVideos = await vdecipher.listVideos();
+        return res.status(403).json({
+          error: "VdoCipher quota limit reached",
+          message: error.message,
+          currentVideos: currentVideos,
+          solution: "Please delete some videos or upgrade your plan",
+        });
+      } catch (listError) {
+        console.error("Error listing videos:", listError);
+        return res.status(403).json({
+          error: "VdoCipher quota limit reached",
+          message: error.message,
+          solution: "Please delete some videos through VdoCipher dashboard",
+        });
+      }
+    }
+
+    console.error("Error creating video:", error);
+    const errorMessage = error instanceof Error ? error.message : "Internal server error";
+    res.status(500).json({ 
+      error: "Failed to create video",
+      details: errorMessage 
+    });
+  }
+};
+
+export const getVideos = async (req: Request, res: Response) => {
+  try {
+    const { subcategoryId } = req.query;
+
+    const query = subcategoryId ? { subcategory: subcategoryId } : {};
+    const videos = await Video.find(query).sort({ createdAt: -1 }).populate("subcategory", "name");
+
+    res.status(200).json(videos);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "Failed to fetch videos";
+    res.status(500).json({ error: errorMessage });
+  }
+};
+
+export const getVideoPlaybackInfo = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const video = await Video.findById(id);
+    if (!video) return res.status(404).json({ error: "Video not found" });
+
+    const response = await fetch(`https://dev.vdocipher.com/api/videos/${video.vdoCipherId}/otp`, {
+      method: "POST",
+      headers: {
+        Authorization: `Apisecret ${process.env.VDOCIPHER_API_SECRET}`,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({ ttl: 300 }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to get playback info: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    res.status(200).json(data);
+  } catch (error: unknown) {
+    console.error("Error getting video playback info:", error);
+    const errorMessage = error instanceof Error ? error.message : "Failed to get video playback info";
+    res.status(500).json({ error: errorMessage });
+  }
+};
+
+export const deleteVideo = async (req: Request, res: Response) => {
+  try {
+    const video = await Video.findById(req.params.id);
+    if (!video) return res.status(404).json({ error: "Video not found" });
+
+    if (video.vdoCipherId) {
+      await vdecipher.deleteVdoCipherVideo(video.vdoCipherId);
+    }
+
+    await Video.findByIdAndDelete(req.params.id);
+    await Subcategory.updateMany({ videos: req.params.id }, { $pull: { videos: req.params.id } });
+
+    res.status(200).json({ message: "Video deleted successfully" });
+  } catch (error: unknown) {
+    console.error("Error deleting video:", error);
+    const errorMessage = error instanceof Error ? error.message : "Failed to delete video";
+    res.status(500).json({ error: errorMessage });
+  }
+};
+
+export const listVdoCipherVideos = async (req: Request, res: Response) => {
+  try {
+    const videos = await vdecipher.listVideos();
+    res.status(200).json({
+      count: videos.length,
+      videos,
+      trialLimit: 4,
+      remainingQuota: 4 - videos.length
+    });
+  } catch (error) {
+    console.error("Error listing VdoCipher videos:", error);
+    res.status(500).json({ error: "Failed to list videos" });
+  }
+};

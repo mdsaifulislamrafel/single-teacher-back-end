@@ -1,47 +1,43 @@
-import express from "express"
-import {
-  getVideos,
-  // getVideoById,
-  createVideo,
-  // updateVideo,
-  deleteVideo,
-  // checkVideoAccess,
-  // markVideoCompleted,
-} from "../controllers/videoController"
-import { authenticate, isAdmin } from "../middleware/auth"
+
+
+
+import { Router } from "express";
+import { authenticate, isAdmin } from "../middleware/auth";
 import videoUpload from "../middleware/videoUpload";
+import {
+  createVideo,
+  deleteVideo,
+  getVideoPlaybackInfo,
+  getVideos,
+} from "../controllers/videoController";
 
-const router = express.Router()
-
-
-// const storage = multer.diskStorage({
-//   destination: (req, file, cb) => {
-//     cb(null, 'uploads/');
-//   },
-//   filename: (req, file, cb) => {
-//     cb(null, Date.now() + '-' + file.originalname);
-//   }
-// });
-
-// const upload = multer({ 
-//   storage: storage,
-//   limits: { fileSize: 500 * 1024 * 1024 }, // 500MB
-//   fileFilter: (req, file, cb) => {
-//     const allowedTypes = ['video/mp4', 'video/quicktime', 'video/x-msvideo'];
-//     if (allowedTypes.includes(file.mimetype)) {
-//       cb(null, true);
-//     } else {
-//       cb(new Error('Only MP4, MOV, and AVI files are allowed'));
-//     }
-//   }
-// });
+const router = Router();
 
 // Public routes
 router.get("/", getVideos);
-router.post("/", authenticate, isAdmin, videoUpload.single('video'), createVideo);
+router.get("/:id/playback", getVideoPlaybackInfo);
+
+// Protected admin routes
+router.post(
+  "/",
+  authenticate,
+  isAdmin,
+  videoUpload.single("video"),
+  createVideo
+);
 router.delete("/:id", authenticate, isAdmin, deleteVideo);
 
+// Video management route
+router.get("/manage/quota", authenticate, isAdmin, async (req, res) => {
+  try {
+    const videos = await listVideos();
+    res.status(200).json(videos);
+  } catch (error) {
+    res.status(500).json({
+      error: "server_error",
+      message: error instanceof Error ? error.message : "Failed to fetch quota info",
+    });
+  }
+});
 
-
-export default router
-
+export default router;

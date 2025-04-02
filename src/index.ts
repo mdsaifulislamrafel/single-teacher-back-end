@@ -58,8 +58,8 @@ app.use("/api/payments", paymentRoutes)
 app.use("/api/upload", uploadRoutes)
 
 // Health check
-app.get("/health", (req, res) => {
-  res.status(200).json({ status: "ok" })
+app.get("/", (req, res) => {
+  res.status(200).json({ status: "Single teacher server is raining" })
 })
 
 // Connect to database and start server

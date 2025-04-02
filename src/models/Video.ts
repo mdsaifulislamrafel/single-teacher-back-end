@@ -4,10 +4,10 @@ import { z } from "zod";
 export const VideoSchema = z.object({
   title: z.string().min(1, { message: "Title is required" }),
   description: z.string().optional(),
-  url: z.string().url({ message: "Valid URL is required" }),
+  vdoCipherId: z.string().min(1, { message: "VdoCipher ID is required" }),
   duration: z.number().positive(),
   subcategory: z.string().min(1, { message: "Subcategory ID is required" }),
-  cloudinaryId: z.string().min(1, { message: "Cloudinary ID is required" }),
+  playbackInfo: z.string().optional(),
 });
 
 export type VideoInput = z.infer<typeof VideoSchema>;
@@ -15,10 +15,10 @@ export type VideoInput = z.infer<typeof VideoSchema>;
 export interface IVideo extends Document {
   title: string;
   description?: string;
-  url: string;
+  vdoCipherId: string;
   duration: number;
   subcategory: mongoose.Types.ObjectId;
-  cloudinaryId: string;
+  playbackInfo?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -27,10 +27,10 @@ const videoSchema: Schema = new Schema(
   {
     title: { type: String, required: true },
     description: { type: String },
-    url: { type: String, required: true },
-    duration: { type: Number, required: true },
+    vdoCipherId: { type: String, required: true },
+    duration: { type: Number, required: true, default: 0 },
     subcategory: { type: Schema.Types.ObjectId, ref: "Subcategory", required: true },
-    cloudinaryId: { type: String, required: true },
+    playbackInfo: { type: String },
   },
   { timestamps: true }
 );
