@@ -122,7 +122,7 @@ export const getVideos = async (req: Request, res: Response) => {
 
     const query = subcategoryId ? { subcategory: subcategoryId } : {};
     const videos = await Video.find(query)
-      .sort({ createdAt: -1 })
+      
       .populate("subcategory", "name");
 
     res.status(200).json(videos);
@@ -172,13 +172,18 @@ export const deleteVideo = async (req: Request, res: Response) => {
       return res.status(404).json({ error: "Video not found" });
     }
 
-    // Delete from VdoCipher
-    await deleteVdoCipherVideo(video.vdoCipherId);
+    // Only attempt deletion if vdoCipherId exists and is valid
+    if (video.vdoCipherId && typeof video.vdoCipherId === 'string') {
+      try {
+        await deleteVdoCipherVideo(video.vdoCipherId);
+      } catch (vdoError) {
+        console.error("VdoCipher deletion error:", vdoError);
+        // Continue with local deletion even if VdoCipher fails
+      }
+    }
 
-    // Delete from database
+    // Rest of the deletion logic...
     await Video.findByIdAndDelete(req.params.id);
-
-    // Remove from subcategory
     await Subcategory.updateMany(
       { videos: req.params.id },
       { $pull: { videos: req.params.id } }

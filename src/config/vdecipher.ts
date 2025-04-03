@@ -157,11 +157,32 @@ export const getVideoInfo = async (videoId: string) => {
 
 export const deleteVdoCipherVideo = async (videoId: string) => {
   try {
-    await vdoCipherClient.delete(`/videos/${videoId}`);
-    return true;
-  } catch (error) {
+    if (!videoId || typeof videoId !== 'string') {
+      console.warn('Invalid VdoCipher ID:', videoId);
+      return;
+    }
+
+    const response = await axios.delete(
+      `https://api.vdocipher.com/v2/videos/${videoId}`,
+      {
+        headers: {
+          Authorization: `Apisecret ${process.env.VDOCIPHER_API_SECRET}`,
+          Accept: 'application/json',
+        },
+      }
+    );
+
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 404 || error.response?.status === 400) {
+      console.warn(`Video ${videoId} not found/deleted in VdoCipher`);
+      return;
+    }
+    console.error('VdoCipher deletion error:', error.response?.data || error.message);
     throw new VdoCipherError(
-      `Failed to delete video: ${error instanceof Error ? error.message : "Unknown error"}`
+      error.response?.data?.message || 
+      error.message || 
+      'Failed to delete video'
     );
   }
 };
