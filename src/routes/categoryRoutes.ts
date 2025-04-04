@@ -8,12 +8,13 @@ import {
   getCategorySubcategories,
 } from "../controllers/categoryController"
 import { authenticate, isAdmin } from "../middleware/auth"
+import upload from "../middleware/upload";
 
 const router = express.Router()
 
 // Public routes
 router.get("/", getCategories);
-router.post("/", authenticate, isAdmin, createCategory);
+router.post("/", authenticate, isAdmin, upload.single('image'), createCategory);
 router.get("/:id/subcategories", getCategorySubcategories);
 
 // Admin routes

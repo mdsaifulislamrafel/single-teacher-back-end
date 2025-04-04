@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import Category, { CategorySchema } from "../models/Category";
 import Subcategory from "../models/Subcategory";
+import cloudinary from "../config/cloudinary";
 
 // Get all categories
 export const getCategories = async (req: Request, res: Response) => {
@@ -15,10 +16,25 @@ export const getCategories = async (req: Request, res: Response) => {
 // Create a new category
 export const createCategory = async (req: Request, res: Response) => {
   try {
-    const validatedData = CategorySchema.parse(req.body);
+    // Check if file exists
+    if (!req.file) {
+      return res.status(400).json({ error: "Category image is required" });
+    }
+
+    // The file is already uploaded to Cloudinary by the middleware
+    // so we can just use the information from req.file
+    const categoryData = {
+      name: req.body.name,
+      description: req.body.description,
+      image: req.file.path // This contains the Cloudinary URL
+    };
+
+    const validatedData = CategorySchema.parse(categoryData);
     const category = await Category.create(validatedData);
+    
     res.status(201).json(category);
   } catch (error) {
+    console.error(error);
     res.status(400).json({ error: "Invalid category data" });
   }
 };
