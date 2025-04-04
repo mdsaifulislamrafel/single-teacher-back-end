@@ -165,36 +165,75 @@ export const getVideoPlaybackInfo = async (req: Request, res: Response) => {
   }
 };
 
+// export const deleteVideo = async (req: Request, res: Response) => {
+
+//   try {
+//     const video = await Video.findById(req.params.id);
+//     if (!video) {
+//       return res.status(404).json({ error: "Video not found" });
+//     }
+
+//     // Only attempt deletion if vdoCipherId exists and is valid
+//     if (video.vdoCipherId && typeof video.vdoCipherId === 'string') {
+//       try {
+//         await deleteVdoCipherVideo(video.vdoCipherId);
+//       } catch (vdoError) {
+//         console.error("VdoCipher deletion error:", vdoError);
+//         // Continue with local deletion even if VdoCipher fails
+//       }
+//     }
+
+//     // Rest of the deletion logic...
+//     await Video.findByIdAndDelete(req.params.id);
+//     await Subcategory.updateMany(
+//       { videos: req.params.id },
+//       { $pull: { videos: req.params.id } }
+//     );
+
+//     res.status(200).json({ message: "Video deleted successfully" });
+//   } catch (error) {
+//     console.error("Error deleting video:", error);
+//     res.status(500).json({
+//       error: "server_error",
+//       message: error instanceof Error ? error.message : "Failed to delete video",
+//     });
+//   }
+// };
+
 export const deleteVideo = async (req: Request, res: Response) => {
   try {
-    const video = await Video.findById(req.params.id);
+    const video = await Video.findById(req.params.id)
     if (!video) {
-      return res.status(404).json({ error: "Video not found" });
+      return res.status(404).json({ error: "Video not found" })
     }
 
     // Only attempt deletion if vdoCipherId exists and is valid
-    if (video.vdoCipherId && typeof video.vdoCipherId === 'string') {
+    if (video.vdoCipherId && typeof video.vdoCipherId === "string") {
       try {
-        await deleteVdoCipherVideo(video.vdoCipherId);
+        console.log(`Attempting to delete VdoCipher video: ${video.vdoCipherId}`)
+        await deleteVdoCipherVideo(video.vdoCipherId)
+        console.log(`Successfully deleted video from VdoCipher: ${video.vdoCipherId}`)
       } catch (vdoError) {
-        console.error("VdoCipher deletion error:", vdoError);
+        console.error("VdoCipher deletion error:", vdoError)
         // Continue with local deletion even if VdoCipher fails
       }
+    } else {
+      console.log("No valid VdoCipher ID found for this video")
     }
 
-    // Rest of the deletion logic...
-    await Video.findByIdAndDelete(req.params.id);
-    await Subcategory.updateMany(
-      { videos: req.params.id },
-      { $pull: { videos: req.params.id } }
-    );
+    // Delete from database
+    await Video.findByIdAndDelete(req.params.id)
 
-    res.status(200).json({ message: "Video deleted successfully" });
+    // Remove references from subcategories
+    await Subcategory.updateMany({ videos: req.params.id }, { $pull: { videos: req.params.id } })
+
+    res.status(200).json({ message: "Video deleted successfully" })
   } catch (error) {
-    console.error("Error deleting video:", error);
+    console.error("Error deleting video:", error)
     res.status(500).json({
       error: "server_error",
       message: error instanceof Error ? error.message : "Failed to delete video",
-    });
+    })
   }
-};
+}
+

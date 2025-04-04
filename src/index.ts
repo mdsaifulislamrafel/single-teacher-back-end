@@ -24,7 +24,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // File upload handling
 app.use(express.static(path.join(__dirname, '../uploads')));
-
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // Database connection
 const connectDB = async () => {
   try {

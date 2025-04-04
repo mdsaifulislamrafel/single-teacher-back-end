@@ -155,37 +155,49 @@ export const getVideoInfo = async (videoId: string) => {
   }
 };
 
+
+
 export const deleteVdoCipherVideo = async (videoId: string) => {
   try {
-    if (!videoId || typeof videoId !== 'string') {
-      console.warn('Invalid VdoCipher ID:', videoId);
-      return;
+    if (!videoId || typeof videoId !== "string") {
+      console.warn("Invalid VdoCipher ID:", videoId)
+      throw new VdoCipherError("Invalid video ID")
     }
 
-    const response = await axios.delete(
-      `https://api.vdocipher.com/v2/videos/${videoId}`,
-      {
-        headers: {
-          Authorization: `Apisecret ${process.env.VDOCIPHER_API_SECRET}`,
-          Accept: 'application/json',
-        },
-      }
-    );
+    if (!VDOCIPHER_API_SECRET) {
+      throw new VdoCipherError("VdoCipher API secret is not configured")
+    }
 
-    return response.data;
+    console.log(`Attempting to delete video from VdoCipher: ${videoId}`)
+
+    // For V2 API, the API secret is passed as a query parameter
+    const url = `https://api.vdocipher.com/v2/videos/${videoId}?clientSecretKey=${VDOCIPHER_API_SECRET}`
+
+    const response = await axios.delete(url, {
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+    })
+
+    console.log("VdoCipher delete response:", response.data)
+    return response.data
   } catch (error: any) {
-    if (error.response?.status === 404 || error.response?.status === 400) {
-      console.warn(`Video ${videoId} not found/deleted in VdoCipher`);
-      return;
+    console.error("VdoCipher deletion error:", error.response?.data || error.message)
+
+    // Check if the error is because the video doesn't exist (already deleted)
+    if (error.response?.status === 404) {
+      console.log(`Video ${videoId} not found in VdoCipher (may have been already deleted)`)
+      return { message: "Video not found or already deleted" }
     }
-    console.error('VdoCipher deletion error:', error.response?.data || error.message);
+
     throw new VdoCipherError(
-      error.response?.data?.message || 
-      error.message || 
-      'Failed to delete video'
-    );
+      `Failed to delete video: ${error.response?.data?.message || error.message || "Unknown error"}`,
+    )
   }
-};
+}
+
+
 
 export const listVideos = async () => {
   try {

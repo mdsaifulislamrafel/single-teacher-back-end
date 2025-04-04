@@ -1,5 +1,5 @@
-import mongoose, { Schema, type Document } from "mongoose"
-import { z } from "zod"
+import mongoose, { Schema, type Document } from "mongoose";
+import { z } from "zod";
 
 // Zod schema for validation
 export const PDFSchema = z.object({
@@ -7,24 +7,25 @@ export const PDFSchema = z.object({
   description: z.string().min(10, { message: "Description must be at least 10 characters" }),
   category: z.string().min(1, { message: "Category ID is required" }),
   subcategory: z.string().min(1, { message: "Subcategory ID is required" }),
-  price: z.number().positive({ message: "Price must be positive" }),
-  fileUrl: z.string().url({ message: "Valid file URL is required" }),
-})
+  price: z.number().nonnegative({ message: "Price must be 0 or more" }),
+  fileUrl: z.string().url({ message: "Valid file URL is required" }), // এখন সম্পূর্ণ URL ভ্যালিডেশন
+  fileSize: z.string().optional()
+});
 
-export type PDFInput = z.infer<typeof PDFSchema>
+export type PDFInput = z.infer<typeof PDFSchema>;
 
 // Mongoose interface
 export interface IPDF extends Document {
-  title: string
-  description: string
-  category: mongoose.Types.ObjectId
-  subcategory: mongoose.Types.ObjectId
-  price: number
-  fileUrl: string
-  fileSize: string
-  downloads: number
-  createdAt: Date
-  updatedAt: Date
+  title: string;
+  description: string;
+  category: mongoose.Types.ObjectId;
+  subcategory: mongoose.Types.ObjectId;
+  price: number;
+  fileUrl: string;
+  fileSize: string;
+  downloads: number;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 // Mongoose schema
@@ -60,15 +61,10 @@ const pdfSchema: Schema = new Schema(
       type: String,
       default: "0 MB",
     },
-    downloads: {
-      type: Number,
-      default: 0,
-    },
   },
   {
     timestamps: true,
-  },
-)
+  }
+);
 
-export default mongoose.model<IPDF>("PDF", pdfSchema)
-
+export default mongoose.model<IPDF>("PDF", pdfSchema);
