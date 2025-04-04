@@ -75,28 +75,46 @@ export const getCategoryById = async (req: Request, res: Response) => {
 // Update a category
 export const updateCategory = async (req: Request, res: Response) => {
   try {
-    // Validate input
-    const validatedData = CategorySchema.parse(req.body);
+    const category = await Category.findById(req.params.id);
+    if (!category) {
+      return res.status(404).json({ error: "Category not found" });
+    }
 
-    // Update category
-    const category = await Category.findByIdAndUpdate(
+    let imageUrl = category.image;
+    let imagePublicId = category.imagePublicId;
+
+    // If new image is uploaded
+    if (req.file) {
+      // Delete old image from Cloudinary if exists
+      if (imagePublicId) {
+        await cloudinary.uploader.destroy(imagePublicId);
+      }
+
+      // The new image is already uploaded by multer-storage-cloudinary
+      // so we can just use the URL from req.file
+      imageUrl = req.file.path;
+      imagePublicId = req.file.filename; // This contains the Cloudinary public_id
+    }
+
+    // Prepare update data
+    const updateData = {
+      name: req.body.name,
+      description: req.body.description,
+      image: imageUrl,
+      imagePublicId: imagePublicId
+    };
+
+    // Validate and update
+    const validatedData = CategorySchema.parse(updateData);
+    const updatedCategory = await Category.findByIdAndUpdate(
       req.params.id,
       validatedData,
       { new: true, runValidators: true }
     );
 
-    if (!category) {
-      return res.status(404).json({ error: "Category not found" });
-    }
-
-    res.status(200).json(category);
+    res.status(200).json(updatedCategory);
   } catch (error) {
     console.error("Error updating category:", error);
-
-    if (error instanceof Error) {
-      return res.status(400).json({ error: error.message });
-    }
-
     res.status(500).json({ error: "Failed to update category" });
   }
 };

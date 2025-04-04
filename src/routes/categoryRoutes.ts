@@ -19,7 +19,7 @@ router.get("/:id/subcategories", getCategorySubcategories);
 
 // Admin routes
 router.get("/:id", getCategoryById)
-router.put("/:id", authenticate, isAdmin, updateCategory)
+router.put("/:id", authenticate, isAdmin, upload.single('image'), updateCategory);
 router.delete("/:id", authenticate, isAdmin, deleteCategory)
 
 export default router
