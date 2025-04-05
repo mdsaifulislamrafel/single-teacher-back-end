@@ -6,6 +6,7 @@ export const CategorySchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   description: z.string().min(10, "Description must be at least 10 characters"),
   image: z.string().url("Invalid image URL"),
+  price: z.string(),
   imagePublicId: z.string().optional() // Added for Cloudinary public_id
 });
 
@@ -17,7 +18,8 @@ export interface ICategory extends Document {
   name: string;
   description: string;
   image: string;
-  imagePublicId?: string; // Added for Cloudinary public_id
+  price: string;
+  imagePublicId?: string;
   subcategories: mongoose.Types.ObjectId[];
   createdAt: Date;
   updatedAt: Date;
@@ -51,6 +53,10 @@ const categorySchema: Schema = new Schema(
         },
         message: "Invalid image URL"
       }
+    },
+    price: {
+      type: String, 
+      required: [true, "Price is required"],
     },
     imagePublicId: { 
       type: String, 

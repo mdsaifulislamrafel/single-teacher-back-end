@@ -6,7 +6,14 @@ import cloudinary from "../config/cloudinary";
 // Get all categories
 export const getCategories = async (req: Request, res: Response) => {
   try {
-    const categories = await Category.find().sort({ createdAt: -1 });
+    const categories = await Category.find()
+      .sort({ createdAt: -1 })
+      .populate({
+        path: "subcategories",
+        populate: {
+          path: "videos",
+        },
+      });
     res.status(200).json(categories);
   } catch (error) {
     res.status(500).json({ error: "Failed to fetch categories" });
@@ -26,12 +33,13 @@ export const createCategory = async (req: Request, res: Response) => {
     const categoryData = {
       name: req.body.name,
       description: req.body.description,
-      image: req.file.path // This contains the Cloudinary URL
+      image: req.file.path,
+      price: req.body.price,
     };
 
     const validatedData = CategorySchema.parse(categoryData);
     const category = await Category.create(validatedData);
-    
+
     res.status(201).json(category);
   } catch (error) {
     console.error(error);
@@ -42,16 +50,14 @@ export const createCategory = async (req: Request, res: Response) => {
 // Get subcategories for a category
 export const getCategorySubcategories = async (req: Request, res: Response) => {
   try {
-    const subcategories = await Subcategory.find({ 
-      category: req.params.id 
+    const subcategories = await Subcategory.find({
+      category: req.params.id,
     }).sort({ createdAt: 1 });
     res.status(200).json(subcategories);
   } catch (error) {
     res.status(500).json({ error: "Failed to fetch subcategories" });
   }
 };
-
-
 
 // optional
 // Get a single category by ID
@@ -69,8 +75,6 @@ export const getCategoryById = async (req: Request, res: Response) => {
     res.status(500).json({ error: "Failed to fetch category" });
   }
 };
-
-
 
 // Update a category
 export const updateCategory = async (req: Request, res: Response) => {
@@ -101,7 +105,8 @@ export const updateCategory = async (req: Request, res: Response) => {
       name: req.body.name,
       description: req.body.description,
       image: imageUrl,
-      imagePublicId: imagePublicId
+      price: req.body.price,
+      imagePublicId: imagePublicId,
     };
 
     // Validate and update
@@ -127,7 +132,8 @@ export const deleteCategory = async (req: Request, res: Response) => {
 
     if (subcategories.length > 0) {
       return res.status(400).json({
-        error: "Cannot delete category with subcategories. Delete subcategories first.",
+        error:
+          "Cannot delete category with subcategories. Delete subcategories first.",
       });
     }
 
@@ -144,5 +150,3 @@ export const deleteCategory = async (req: Request, res: Response) => {
     res.status(500).json({ error: "Failed to delete category" });
   }
 };
-
-

@@ -14,11 +14,9 @@ const fileFilter = (req: Request, file: Express.Multer.File, cb: multer.FileFilt
 const upload = multer({
   storage,
   limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB
+    fileSize: 50 * 1024 * 1024, // 50MB
   },
   fileFilter,
 });
 
 export const uploadPDFMiddleware = upload.single("pdfFile");
-
-

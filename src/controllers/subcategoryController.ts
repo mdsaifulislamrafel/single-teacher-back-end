@@ -11,8 +11,10 @@ export const getSubcategories = async (req: Request, res: Response) => {
     const subcategories = await Subcategory.find()
       .populate("category", "name")
       .sort({ createdAt: -1 });
+
     res.status(200).json(subcategories);
   } catch (error) {
+    console.error("Error fetching subcategories:", error);
     res.status(500).json({ error: "Failed to fetch subcategories" });
   }
 };
@@ -34,7 +36,7 @@ export const createSubcategory = async (req: Request, res: Response) => {
     
     await Category.findByIdAndUpdate(validatedData.category, {
       $push: { subcategories: subcategory._id }
-    });
+    }); 
 
     res.status(201).json(subcategory);
   } catch (error) {
@@ -130,11 +132,19 @@ export const deleteSubcategory = async (req: Request, res: Response) => {
       });
     }
 
-    // Delete subcategory
-    const subcategory = await Subcategory.findByIdAndDelete(req.params.id);
+    // First get the subcategory to know which category it belongs to
+    const subcategory = await Subcategory.findById(req.params.id);
     if (!subcategory) {
       return res.status(404).json({ error: "Subcategory not found" });
     }
+
+    // Delete subcategory
+    await Subcategory.findByIdAndDelete(req.params.id);
+
+    // Remove subcategory reference from its category
+    await Category.findByIdAndUpdate(subcategory.category, {
+      $pull: { subcategories: req.params.id }
+    });
 
     res.status(200).json({ message: "Subcategory deleted successfully" });
   } catch (error) {

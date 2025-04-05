@@ -4,12 +4,15 @@ import { z } from "zod";
 // Zod schema for validation
 export const PDFSchema = z.object({
   title: z.string().min(5, { message: "Title must be at least 5 characters" }),
-  description: z.string().min(10, { message: "Description must be at least 10 characters" }),
+  description: z
+    .string()
+    .min(10, { message: "Description must be at least 10 characters" }),
   category: z.string().min(1, { message: "Category ID is required" }),
   subcategory: z.string().min(1, { message: "Subcategory ID is required" }),
   price: z.number().nonnegative({ message: "Price must be 0 or more" }),
-  fileUrl: z.string().url({ message: "Valid file URL is required" }), // এখন সম্পূর্ণ URL ভ্যালিডেশন
-  fileSize: z.string().optional()
+  fileUrl: z.string().url({ message: "Valid file URL is required" }),
+  fileSize: z.string().optional(),
+  publicId: z.string().optional(),
 });
 
 export type PDFInput = z.infer<typeof PDFSchema>;
@@ -23,6 +26,7 @@ export interface IPDF extends Document {
   price: number;
   fileUrl: string;
   fileSize: string;
+  publicId?: string;
   downloads: number;
   createdAt: Date;
   updatedAt: Date;
@@ -60,6 +64,13 @@ const pdfSchema: Schema = new Schema(
     fileSize: {
       type: String,
       default: "0 MB",
+    },
+    publicId: {
+      type: String,
+    },
+    downloads: {
+      type: Number,
+      default: 0,
     },
   },
   {

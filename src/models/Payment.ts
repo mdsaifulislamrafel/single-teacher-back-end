@@ -1,28 +1,34 @@
-import mongoose, { Schema, type Document } from "mongoose"
-import { z } from "zod"
+import mongoose, { Schema, type Document } from "mongoose";
+import { z } from "zod";
 
 // Zod schema for validation
 export const PaymentSchema = z.object({
-  user: z.string().min(1, { message: "User ID is required" }),
-  item: z.string().min(1, { message: "Item ID is required" }),
-  itemType: z.enum(["course", "pdf"]),
-  amount: z.number().positive({ message: "Amount must be positive" }),
-  transactionId: z.string().min(1, { message: "Transaction ID is required" }),
+  bankAccountNumber: z.string().optional(),
+  courseId: z.string(),
+  email: z.string(),
+  paymentMethod: z.enum([
+    "বিকাশ (bKash)",
+    "নগদ (Nagad)",
+    "রকেট (Rocket)",
+    "ব্যাংক ট্রান্সফার (Bank)",
+  ]),
+  phoneNumber: z.string().optional(),
   status: z.enum(["pending", "approved", "rejected"]).default("pending"),
-})
+  transactionId: z.string().optional()
+});
 
-export type PaymentInput = z.infer<typeof PaymentSchema>
+export type PaymentInput = z.infer<typeof PaymentSchema>;
 
 // Mongoose interface
 export interface IPayment extends Document {
-  user: mongoose.Types.ObjectId
-  item: mongoose.Types.ObjectId
-  itemType: "course" | "pdf"
-  amount: number
-  transactionId: string
-  status: "pending" | "approved" | "rejected"
-  createdAt: Date
-  updatedAt: Date
+  bankAccountNumber: string,
+  courseId: mongoose.Types.ObjectId;
+  email: string;
+  amount: number;
+  transactionId: string;
+  status: "pending" | "approved" | "rejected";
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 // Mongoose schema
@@ -59,8 +65,7 @@ const paymentSchema: Schema = new Schema(
   },
   {
     timestamps: true,
-  },
-)
+  }
+);
 
-export default mongoose.model<IPayment>("Payment", paymentSchema)
-
+export default mongoose.model<IPayment>("Payment", paymentSchema);
