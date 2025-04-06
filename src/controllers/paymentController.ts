@@ -1,16 +1,51 @@
 import type { Request, Response } from "express";
 import Payment, { PaymentSchema } from "../models/Payment";
 import User from "../models/User";
-import UserProgress from "../models/UserProgress";
 
-// Get all payments
+
+
 export const getPayments = async (req: Request, res: Response) => {
   try {
     const payments = await Payment.find()
-      .populate("user", "name email")
+      .populate("user", "name email") // Populate user
       .sort({ createdAt: -1 });
 
-    res.status(200).json(payments);
+    if (!payments || payments.length === 0) {
+      return res.status(404).json({ error: "Payments not found" });
+    }
+
+    // আলাদা ভাবে course এবং pdf এর জন্য populate
+    const populatedPayments = await Promise.all(
+      payments.map(async (payment) => {
+        if (payment.itemType === "course") {
+          // Populate course -> subcategories -> videos
+          const populatedCourse = await Payment.populate(payment, {
+            path: "itemId",
+            model: "Category",
+            populate: {
+              path: "subcategories",
+              model: "Subcategory",
+              populate: {
+                path: "videos",
+                model: "Video",
+              },
+            },
+          });
+          return populatedCourse;
+        } else if (payment.itemType === "pdf") {
+          // Populate pdf document only
+          const populatedPdf = await Payment.populate(payment, {
+            path: "itemId",
+            model: "Pdf",
+          });
+          return populatedPdf;
+        } else {
+          return payment;
+        }
+      })
+    );
+
+    res.status(200).json(populatedPayments);
   } catch (error) {
     console.error("Error fetching payments:", error);
     res.status(500).json({ error: "Failed to fetch payments" });
@@ -111,44 +146,46 @@ export const createPayment = async (req: Request, res: Response) => {
 
 
 // Update payment status
+// controllers/paymentController.ts
+import { z } from "zod";
+
+// Optional: Validate incoming body with Zod
+const updatePaymentStatusSchema = z.object({
+  status: z.enum(["pending", "approved", "rejected"]),
+});
+
+// ✅ Update Payment Status Controller
 export const updatePaymentStatus = async (req: Request, res: Response) => {
   try {
-    const { status } = req.body;
+    const { id } = req.params;
 
-    if (!status || !["pending", "approved", "rejected"].includes(status)) {
-      return res.status(400).json({ error: "Valid status is required" });
+    // Validate request body using Zod
+    const parseResult = updatePaymentStatusSchema.safeParse(req.body);
+
+    if (!parseResult.success) {
+      return res.status(400).json({
+        error: "Invalid status. Must be one of: pending, approved, or rejected",
+        issues: parseResult.error.issues,
+      });
     }
 
-    // Get payment
-    const payment = await Payment.findById(req.params.id);
+    const { status } = parseResult.data;
+
+    // Find the payment by ID
+    const payment = await Payment.findById(id);
 
     if (!payment) {
       return res.status(404).json({ error: "Payment not found" });
     }
 
-    // Update status
+    // Update the status
     payment.status = status;
     await payment.save();
 
-    // If payment is approved and it's for a course (subcategory)
-    if (status === "approved" && payment.itemType === "course") {
-      // Create user progress for the subcategory
-      await UserProgress.findOneAndUpdate(
-        {
-          user: payment.user,
-          subcategory: payment.item,
-        },
-        {
-          user: payment.user,
-          subcategory: payment.item,
-          completedVideos: [],
-          isCompleted: false,
-        },
-        { upsert: true, new: true }
-      );
-    }
-
-    res.status(200).json(payment);
+    res.status(200).json({
+      message: "Payment status updated successfully",
+      data: payment,
+    });
   } catch (error) {
     console.error("Error updating payment status:", error);
     res.status(500).json({ error: "Failed to update payment status" });
