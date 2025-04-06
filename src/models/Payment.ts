@@ -1,11 +1,10 @@
 import mongoose, { Schema, type Document } from "mongoose";
 import { z } from "zod";
 
-// Zod schema for validation
+// Zod Schema for validation
 export const PaymentSchema = z.object({
   bankAccountNumber: z.string().optional(),
-  courseId: z.string(),
-  email: z.string(),
+  itemId: z.string(),
   paymentMethod: z.enum([
     "বিকাশ (bKash)",
     "নগদ (Nagad)",
@@ -13,54 +12,80 @@ export const PaymentSchema = z.object({
     "ব্যাংক ট্রান্সফার (Bank)",
   ]),
   phoneNumber: z.string().optional(),
+  price: z.union([z.number(), z.string()]).transform(Number), // support string or number
   status: z.enum(["pending", "approved", "rejected"]).default("pending"),
-  transactionId: z.string().optional()
+  transactionId: z.string().optional(), // ✅ optional
+  user: z.string(),
+  itemType: z.enum(["course", "pdf"]),
 });
 
 export type PaymentInput = z.infer<typeof PaymentSchema>;
 
-// Mongoose interface
+// TypeScript Interface
 export interface IPayment extends Document {
-  bankAccountNumber: string,
-  courseId: mongoose.Types.ObjectId;
-  email: string;
-  amount: number;
-  transactionId: string;
+  bankAccountNumber?: string;
+  itemId: mongoose.Types.ObjectId;
+  paymentMethod:
+    | "বিকাশ (bKash)"
+    | "নগদ (Nagad)"
+    | "রকেট (Rocket)"
+    | "ব্যাংক ট্রান্সফার (Bank)";
+  phoneNumber?: string;
+  price: number;
   status: "pending" | "approved" | "rejected";
+  transactionId?: string;
+  user: mongoose.Types.ObjectId;
+  itemType: "course" | "pdf";
   createdAt: Date;
   updatedAt: Date;
 }
 
-// Mongoose schema
+// Mongoose Schema
 const paymentSchema: Schema = new Schema(
   {
-    user: {
-      type: Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
+    bankAccountNumber: {
+      type: String,
     },
-    item: {
+    itemId: {
       type: Schema.Types.ObjectId,
+      required: true,
       refPath: "itemType",
-      required: true,
     },
-    itemType: {
+    paymentMethod: {
       type: String,
-      enum: ["course", "pdf"],
+      enum: [
+        "বিকাশ (bKash)",
+        "নগদ (Nagad)",
+        "রকেট (Rocket)",
+        "ব্যাংক ট্রান্সফার (Bank)",
+      ],
       required: true,
     },
-    amount: {
+    phoneNumber: {
+      type: String,
+    },
+    price: {
       type: Number,
-      required: true,
-    },
-    transactionId: {
-      type: String,
       required: true,
     },
     status: {
       type: String,
       enum: ["pending", "approved", "rejected"],
       default: "pending",
+    },
+    transactionId: {
+      type: String,
+      required: false, // ✅ optional now
+    },
+    user: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    itemType: {
+      type: String,
+      enum: ["course", "pdf"],
+      required: true,
     },
   },
   {

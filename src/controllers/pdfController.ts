@@ -9,7 +9,7 @@ import cloudinary from "../config/cloudinary";
 export const getPDFs = async (req: Request, res: Response) => {
   try {
     const pdfs = await PDF.find()
-      .populate("category", "name")
+      .populate("category", "name image")
       .populate("subcategory", "name")
       .sort({ createdAt: -1 });
     res.status(200).json(pdfs);

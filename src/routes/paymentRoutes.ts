@@ -4,7 +4,6 @@ import {
   getPaymentById,
   createPayment,
   updatePaymentStatus,
-  getPendingPayments,
 } from "../controllers/paymentController"
 import { authenticate, isAdmin } from "../middleware/auth"
 
@@ -15,8 +14,8 @@ router.post("/", authenticate, createPayment)
 
 // Admin routes
 router.get("/", authenticate, isAdmin, getPayments)
-router.get("/pending", authenticate, isAdmin, getPendingPayments)
-router.get("/:id", authenticate, isAdmin, getPaymentById)
+// router.get("/pending", authenticate, isAdmin, getPendingPayments)
+router.get("/:id", authenticate, getPaymentById)
 router.patch("/:id/status", authenticate, isAdmin, updatePaymentStatus)
 
 export default router

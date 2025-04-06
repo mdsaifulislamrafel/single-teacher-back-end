@@ -8,10 +8,6 @@ export const getPayments = async (req: Request, res: Response) => {
   try {
     const payments = await Payment.find()
       .populate("user", "name email")
-      .populate({
-        path: "item",
-        select: "title",
-      })
       .sort({ createdAt: -1 });
 
     res.status(200).json(payments);
@@ -21,36 +17,79 @@ export const getPayments = async (req: Request, res: Response) => {
   }
 };
 
-// Get a single payment by ID
+
+// single user data all
+
 export const getPaymentById = async (req: Request, res: Response) => {
   try {
-    const payment = await Payment.findById(req.params.id)
-      .populate("user", "name email")
-      .populate({
-        path: "item",
-        select: "title",
-      });
+    const payments = await Payment.find({ user: req.params.id })
+      .populate("user", "name email") // Populate user
 
-    if (!payment) {
+    if (!payments || payments.length === 0) {
       return res.status(404).json({ error: "Payment not found" });
     }
 
-    res.status(200).json(payment);
+    // আলাদা ভাবে course এবং pdf এর জন্য populate
+    const populatedPayments = await Promise.all(
+      payments.map(async (payment) => {
+        if (payment.itemType === "course") {
+          // Populate course -> subcategories -> videos
+          const populatedCourse = await Payment.populate(payment, {
+            path: "itemId",
+            model: "Category",
+            populate: {
+              path: "subcategories",
+              model: "Subcategory",
+              populate: {
+                path: "videos",
+                model: "Video",
+              },
+            },
+          });
+          return populatedCourse;
+        } else if (payment.itemType === "pdf") {
+          // Populate pdf document only
+          const populatedPdf = await Payment.populate(payment, {
+            path: "itemId",
+            model: "Pdf",
+          });
+          return populatedPdf;
+        } else {
+          return payment;
+        }
+      })
+    );
+
+    res.status(200).json(populatedPayments);
   } catch (error) {
-    console.error("Error fetching payment:", error);
-    res.status(500).json({ error: "Failed to fetch payment" });
+    console.error("Error fetching payment by ID:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 
-// Create a new payment
+
+
 export const createPayment = async (req: Request, res: Response) => {
   try {
+    console.log("Incoming request body:", req.body);
+
     // Validate input
     const validatedData = PaymentSchema.parse(req.body);
 
+    // Check if payment already exists for the same itemId and user
+    const isExistData = await Payment.findOne({
+      itemId: validatedData.itemId,
+      user: validatedData.user,
+    });
+
+    if (isExistData) {
+      return res.status(409).json({
+        error: "You have already submitted a payment for this item.",
+      });
+    }
+
     // Check if user exists
     const user = await User.findById(validatedData.user);
-
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
@@ -69,6 +108,7 @@ export const createPayment = async (req: Request, res: Response) => {
     res.status(500).json({ error: "Failed to create payment" });
   }
 };
+
 
 // Update payment status
 export const updatePaymentStatus = async (req: Request, res: Response) => {
@@ -112,23 +152,5 @@ export const updatePaymentStatus = async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Error updating payment status:", error);
     res.status(500).json({ error: "Failed to update payment status" });
-  }
-};
-
-// Get pending payments
-export const getPendingPayments = async (req: Request, res: Response) => {
-  try {
-    const payments = await Payment.find({ status: "pending" })
-      .populate("user", "name email")
-      .populate({
-        path: "item",
-        select: "title",
-      })
-      .sort({ createdAt: -1 });
-
-    res.status(200).json(payments);
-  } catch (error) {
-    console.error("Error fetching pending payments:", error);
-    res.status(500).json({ error: "Failed to fetch pending payments" });
   }
 };

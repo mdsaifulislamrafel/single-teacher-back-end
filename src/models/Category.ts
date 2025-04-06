@@ -7,7 +7,7 @@ export const CategorySchema = z.object({
   description: z.string().min(10, "Description must be at least 10 characters"),
   image: z.string().url("Invalid image URL"),
   price: z.string(),
-  imagePublicId: z.string().optional() // Added for Cloudinary public_id
+  imagePublicId: z.string().optional()
 });
 
 // Type derived from Zod schema

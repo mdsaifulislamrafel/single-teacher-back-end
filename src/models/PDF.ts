@@ -78,4 +78,4 @@ const pdfSchema: Schema = new Schema(
   }
 );
 
-export default mongoose.model<IPDF>("PDF", pdfSchema);
+export default mongoose.model<IPDF>("Pdf", pdfSchema);
