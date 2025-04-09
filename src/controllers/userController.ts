@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import User from "../models/User";
 import Payment from "../models/Payment";
 import UserProgress from "../models/UserProgress";
+import cloudinary from "../config/cloudinary";
 
 // Get all users
 export const getUsers = async (req: Request, res: Response) => {
@@ -15,10 +16,14 @@ export const getUsers = async (req: Request, res: Response) => {
 };
 
 // Get a single user by ID
-export const getUserById = async (req: Request, res: Response) => {
+export const getUserById = async (req: Request, res: Response): Promise<void> => {
   try {
     const user = await User.findById(req.params.id).select("-password");
-    if (!user) return res.status(404).json({ error: "User not found" });
+    if (!user) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+
     res.status(200).json(user);
   } catch (error) {
     console.error("Error fetching user:", error);
@@ -27,29 +32,84 @@ export const getUserById = async (req: Request, res: Response) => {
 };
 
 // Update a user
-export const updateUser = async (req: Request, res: Response) => {
+export const updateUser = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { password, ...updateData } = req.body;
-    const user = await User.findByIdAndUpdate(req.params.id, updateData, {
-      new: true,
-      runValidators: true,
-    }).select("-password");
+    const userId = req.params.id
 
-    if (!user) return res.status(404).json({ error: "User not found" });
-    res.status(200).json(user);
+    // Find the user first
+    const user = await User.findById(userId)
+    if (!user) {
+      res.status(404).json({ error: "User not found" })
+      return
+    }
+
+    // Update name if provided
+    if (req.body.name) {
+      user.name = req.body.name
+    }
+
+    // Handle password change if both passwords are provided
+    if (req.body.currentPassword && req.body.newPassword) {
+      const isMatch = await user.comparePassword(req.body.currentPassword)
+      if (!isMatch) {
+        res.status(400).json({ error: "Current password is incorrect" })
+        return
+      }
+      user.password = req.body.newPassword // This will trigger the pre-save hook
+    }
+
+    // Handle profile picture upload
+    if (req.file) {
+      try {
+        console.log("Processing file upload:", req.file)
+
+        // Delete previous avatar from cloudinary if exists
+        if (user.avatar && user.avatar.public_id) {
+          console.log("Deleting previous avatar:", user.avatar.public_id)
+          await cloudinary.uploader.destroy(user.avatar.public_id)
+        }
+
+        // Set new avatar
+        user.avatar = {
+          public_id: req.file.filename,
+          url: req.file.path,
+        }
+      } catch (cloudinaryError) {
+        console.error("Cloudinary error:", cloudinaryError)
+        // Continue with user update even if cloudinary fails
+      }
+    }
+
+    // Save the user
+    const updatedUser = await user.save()
+    console.log("User updated successfully")
+
+    // Return the user without password
+    const userWithoutPassword = updatedUser.toObject()
+
+    res.status(200).json(userWithoutPassword)
   } catch (error: any) {
-    console.error("Error updating user:", error);
-    res.status(error.errors ? 400 : 500).json({ error: error.errors || "Failed to update user" });
+    console.error("Error updating user:", error)
+    res.status(500).json({
+      error: error.message || "Failed to update user",
+    })
   }
-};
+}
+
+
 
 // Delete a user
-export const deleteUser = async (req: Request, res: Response) => {
+export const deleteUser = async (req: Request, res: Response): Promise<void> => {
   try {
     const user = await User.findByIdAndDelete(req.params.id);
-    if (!user) return res.status(404).json({ error: "User not found" });
+    if (!user) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+
     await Payment.deleteMany({ user: req.params.id });
     await UserProgress.deleteMany({ user: req.params.id });
+
     res.status(200).json({ message: "User deleted successfully" });
   } catch (error) {
     console.error("Error deleting user:", error);

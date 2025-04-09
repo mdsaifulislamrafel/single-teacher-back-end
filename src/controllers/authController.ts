@@ -2,10 +2,7 @@ import type { Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import { ZodError } from "zod";
 import User, { UserSchema } from "../models/User";
-
-import { uploadSingle } from "../middleware/upload";
 import fs from "fs";
-import path from "path";
 import cloudinary from "../config/cloudinary";
 
 
@@ -16,7 +13,7 @@ const generateToken = (id: string, role: string) => {
   });
 };
 
-export const register = async (req: Request, res: Response) => {
+export const register = async (req: Request, res: Response): Promise<void> => {
   try {
     const { name, email, password } = req.body;
 
@@ -26,7 +23,8 @@ export const register = async (req: Request, res: Response) => {
     // Check if email exists
     const existingUser = await User.findOne({ email: validatedData.email });
     if (existingUser) {
-      return res.status(400).json({ error: "Email already in use" });
+      res.status(400).json({ error: "Email already in use" });
+      return;
     }
 
     let avatarData;
@@ -44,7 +42,8 @@ export const register = async (req: Request, res: Response) => {
           url: result.secure_url,
         };
       } catch (uploadError) {
-        return res.status(500).json({ error: "Failed to upload image" });
+        res.status(500).json({ error: "Failed to upload image" });
+        return;
       } finally {
         fs.unlink(req.file.path, () => {});
       }
@@ -75,39 +74,44 @@ export const register = async (req: Request, res: Response) => {
     console.error("Registration error:", error);
 
     if (error instanceof ZodError) {
-      return res.status(400).json({
+      res.status(400).json({
         error: "Validation error",
         details: error.errors.map((e) => ({
           field: e.path[0],
           message: e.message,
         })),
       });
+      return;
     }
 
     const errorMessage =
       error instanceof Error ? error.message : "Registration failed";
+
     res.status(500).json({ error: errorMessage });
   }
 };
 // Login user
-export const login = async (req: Request, res: Response) => {
+export const login = async (req: Request, res: Response): Promise<void> => {
   try {
     const { email, password } = req.body;
 
     if (!email || !password) {
-      return res.status(400).json({ error: "Email and password are required" });
+      res.status(400).json({ error: "Email and password are required" });
+      return;
     }
 
     // Find user
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(401).json({ error: "Invalid credentials" });
+      res.status(401).json({ error: "Invalid credentials" });
+      return;
     }
 
     // Check password
     const isPasswordValid = await user.comparePassword(password);
     if (!isPasswordValid) {
-      return res.status(401).json({ error: "Invalid credentials" });
+      res.status(401).json({ error: "Invalid credentials" });
+      return;
     }
 
     // Generate token
@@ -129,13 +133,13 @@ export const login = async (req: Request, res: Response) => {
 };
 
 // Get current user
-export const getCurrentUser = async (req: Request, res: Response) => {
+export const getCurrentUser = async (req: Request, res: Response): Promise<void> => {
   try {
-    // User is attached to request by auth middleware
     const user = await User.findById(req.user.id).select("-password");
 
     if (!user) {
-      return res.status(404).json({ error: "User not found" });
+      res.status(404).json({ error: "User not found" });
+      return;
     }
 
     res.status(200).json({ user });
@@ -144,50 +148,4 @@ export const getCurrentUser = async (req: Request, res: Response) => {
     res.status(500).json({ error: "Failed to fetch user" });
   }
 };
-// Google OAuth login/register
-export const googleAuth = async (req: Request, res: Response) => {
-  try {
-    const { name, email, googleId } = req.body;
 
-    if (!name || !email || !googleId) {
-      return res.status(400).json({
-        error: "Name, email, and Google ID are required",
-      });
-    }
-
-    // Check if user exists
-    let user = await User.findOne({ email });
-
-    if (!user) {
-      // Create new user
-      user = await User.create({
-        name,
-        email,
-        googleId,
-        password:
-          Math.random().toString(36).slice(-10) +
-          Math.random().toString(36).slice(-10), // Random password
-      });
-    } else if (!user.googleId) {
-      // Update Google ID if not set
-      user.googleId = googleId;
-      await user.save();
-    }
-
-    // Generate token
-    const token = generateToken(user._id.toString(), user.role);
-
-    res.status(200).json({
-      token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
-    });
-  } catch (error) {
-    console.error("Error with Google authentication:", error);
-    res.status(500).json({ error: "Failed to authenticate with Google" });
-  }
-};

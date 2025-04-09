@@ -13,20 +13,21 @@ const getFileSize = (filePath: string): string => {
 }
 
 // Handle PDF file upload
-export const uploadFile = (req: Request, res: Response) => {
+export const uploadFile = (req: Request, res: Response): void => {
   try {
     if (!req.file) {
-      return res.status(400).json({ error: "No file uploaded" })
+      res.status(400).json({ error: "No file uploaded" });
+      return;
     }
 
     // Get the server's base URL
-    const baseUrl = `${req.protocol}://${req.get("host")}`
+    const baseUrl = `${req.protocol}://${req.get("host")}`;
 
     // Create a URL for the uploaded file
-    const fileUrl = `${baseUrl}/uploads/${req.file.filename}`
+    const fileUrl = `${baseUrl}/uploads/${req.file.filename}`;
 
     // Get file size
-    const fileSize = getFileSize(req.file.path)
+    const fileSize = getFileSize(req.file.path);
 
     // Return success response with file details
     res.status(200).json({
@@ -38,36 +39,37 @@ export const uploadFile = (req: Request, res: Response) => {
         size: fileSize,
         url: fileUrl,
       },
-    })
-  } catch (error: any) {
-    console.error("Error uploading file:", error)
-    res.status(500).json({ error: "Failed to upload file" })
+    });
+  } catch (error) {
+    console.error("Error uploading file:", error);
+    res.status(500).json({ error: "Failed to upload file" });
   }
-}
+};
 
-// Handle video upload to Vimeo
-export const uploadVideo = async (req: Request, res: Response) => {
+// Upload a video
+export const uploadVideo = async (req: Request, res: Response): Promise<void> => {
   try {
     const { title, description, subcategoryId } = req.body;
     const filePath = req.file?.path;
 
     if (!filePath) {
-      return res.status(400).json({ error: "No file uploaded" });
+      res.status(400).json({ error: "No file uploaded" });
+      return;
     }
 
     const vimeoResult = await uploadToVimeo(filePath, title, description || "");
-    
+
     const video = await Video.create({
       title,
       description,
       url: vimeoResult.vimeoUrl,
       vimeoId: vimeoResult.vimeoId,
       duration: vimeoResult.duration,
-      subcategory: subcategoryId
+      subcategory: subcategoryId,
     });
 
     await Subcategory.findByIdAndUpdate(subcategoryId, {
-      $push: { videos: video._id }
+      $push: { videos: video._id },
     });
 
     res.status(201).json(video);

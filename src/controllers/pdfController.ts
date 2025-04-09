@@ -20,20 +20,22 @@ export const getPDFs = async (req: Request, res: Response) => {
 };
 
 // Get a single PDF by ID
-export const getPDFById = async (req: Request, res: Response) => {
+export const getPDFById = async (req: Request, res: Response): Promise<void> => {
   try {
     const pdf = await PDF.findById(req.params.id)
-      .populate("category", "name")
-      .populate("subcategory", "name");
+      .populate('category', 'name')
+      .populate('subcategory', 'name');
     if (!pdf) {
-      return res.status(404).json({ error: "PDF not found" });
+      res.status(404).json({ error: 'PDF not found' });
+      return;
     }
     res.status(200).json(pdf);
   } catch (error) {
-    console.error("Error fetching PDF:", error);
-    res.status(500).json({ error: "Failed to fetch PDF" });
+    console.error('Error fetching PDF:', error);
+    res.status(500).json({ error: 'Failed to fetch PDF' });
   }
 };
+
 
 const uploadPDFToCloudinary = (buffer: Buffer) => {
   return new Promise<any>((resolve, reject) => {
@@ -54,10 +56,11 @@ const uploadPDFToCloudinary = (buffer: Buffer) => {
 };
 
 // Create a new PDF
-export const createPDF = async (req: Request, res: Response) => {
+export const createPDF = async (req: Request, res: Response): Promise<void> => {
   try {
     if (!req.file) {
-      return res.status(400).json({ error: "PDF file is required" });
+      res.status(400).json({ error: 'PDF file is required' });
+      return;
     }
 
     const result = await uploadPDFToCloudinary(req.file.buffer);
@@ -78,53 +81,59 @@ export const createPDF = async (req: Request, res: Response) => {
     const category = await Category.findById(validatedData.category);
     if (!category) {
       await cloudinary.uploader.destroy(result.public_id);
-      return res.status(404).json({ error: "Category not found" });
+      res.status(404).json({ error: 'Category not found' });
+      return;
     }
 
     const subcategory = await Subcategory.findById(validatedData.subcategory);
     if (!subcategory) {
       await cloudinary.uploader.destroy(result.public_id);
-      return res.status(404).json({ error: "Subcategory not found" });
+      res.status(404).json({ error: 'Subcategory not found' });
+      return;
     }
 
     const pdf = await PDF.create(validatedData);
 
     res.status(201).json({
       ...pdf.toObject(),
-      message: "PDF created successfully",
+      message: 'PDF created successfully',
       downloadUrl: result.secure_url,
     });
   } catch (error: any) {
-    console.error("Error creating PDF:", error);
+    console.error('Error creating PDF:', error);
 
     if (error.result?.public_id) {
       await cloudinary.uploader.destroy(error.result.public_id).catch(console.error);
     }
 
-    if (error.name === "ZodError") {
-      return res.status(400).json({ error: "Validation failed", details: error.errors });
+    if (error) {
+      res.status(400).json({ error: 'Validation failed', details: error.errors });
+      return;
     }
 
     if (error.http_code === 400) {
-      return res.status(400).json({ error: "Invalid file format. Only PDFs are allowed." });
+      res.status(400).json({ error: 'Invalid file format. Only PDFs are allowed.' });
+      return;
     }
 
     if (error.http_code === 413) {
-      return res.status(413).json({ error: "File too large. Maximum size is 100MB." });
+      res.status(413).json({ error: 'File too large. Maximum size is 100MB.' });
+      return;
     }
 
-    res.status(500).json({ error: "Failed to create PDF", details: error.message });
+    res.status(500).json({ error: 'Failed to create PDF', details: error.message });
   }
 };
 
 // Update a PDF
-export const updatePDF = async (req: Request, res: Response) => {
+export const updatePDF = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const existingPDF = await PDF.findById(id);
 
     if (!existingPDF) {
-      return res.status(404).json({ error: "PDF not found" });
+      res.status(404).json({ error: 'PDF not found' });
+      return;
     }
 
     let fileUrl = existingPDF.fileUrl;
@@ -157,12 +166,14 @@ export const updatePDF = async (req: Request, res: Response) => {
 
     const category = await Category.findById(validatedData.category);
     if (!category) {
-      return res.status(404).json({ error: "Category not found" });
+      res.status(404).json({ error: 'Category not found' });
+      return;
     }
 
     const subcategory = await Subcategory.findById(validatedData.subcategory);
     if (!subcategory) {
-      return res.status(404).json({ error: "Subcategory not found" });
+      res.status(404).json({ error: 'Subcategory not found' });
+      return;
     }
 
     const updatedPDF = await PDF.findByIdAndUpdate(id, validatedData, {
@@ -171,35 +182,38 @@ export const updatePDF = async (req: Request, res: Response) => {
     });
 
     if (!updatedPDF) {
-      return res.status(404).json({ error: "PDF not found after update attempt" });
+      res.status(404).json({ error: 'PDF not found after update attempt' });
+      return;
     }
 
     res.status(200).json({
       ...updatedPDF.toObject(),
-      message: "PDF updated successfully",
+      message: 'PDF updated successfully',
     });
   } catch (error: any) {
-    console.error("Error updating PDF:", error);
+    console.error('Error updating PDF:', error);
 
     if (error?.errors) {
-      return res.status(400).json({ error: error.errors });
+      res.status(400).json({ error: error.errors });
+      return;
     }
 
-    if (error.name === "ZodError") {
-      return res.status(400).json({ error: error.errors });
+    if (error) {
+      res.status(400).json({ error: error.errors });
+      return;
     }
 
-    res.status(500).json({ error: "Failed to update PDF" });
+    res.status(500).json({ error: 'Failed to update PDF' });
   }
 };
 
-// Delete a PDF
-export const deletePDF = async (req: Request, res: Response) => {
+export const deletePDF = async (req: Request, res: Response): Promise<void> => {
   try {
     const pdf = await PDF.findById(req.params.id);
 
     if (!pdf) {
-      return res.status(404).json({ error: "PDF not found" });
+      res.status(404).json({ error: 'PDF not found' });
+      return;
     }
 
     if (pdf.publicId) {
@@ -208,9 +222,9 @@ export const deletePDF = async (req: Request, res: Response) => {
 
     await PDF.findByIdAndDelete(req.params.id);
 
-    res.status(200).json({ message: "PDF deleted successfully" });
+    res.status(200).json({ message: 'PDF deleted successfully' });
   } catch (error: any) {
-    console.error("Error deleting PDF:", error);
-    res.status(500).json({ error: "Failed to delete PDF" });
+    console.error('Error deleting PDF:', error);
+    res.status(500).json({ error: 'Failed to delete PDF' });
   }
 };

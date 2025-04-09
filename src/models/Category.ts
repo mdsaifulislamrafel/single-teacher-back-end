@@ -7,7 +7,7 @@ export const CategorySchema = z.object({
   description: z.string().min(10, "Description must be at least 10 characters"),
   image: z.string().url("Invalid image URL"),
   price: z.string(),
-  imagePublicId: z.string().optional()
+  imagePublicId: z.string().optional(),
 });
 
 // Type derived from Zod schema
@@ -28,19 +28,19 @@ export interface ICategory extends Document {
 // Mongoose schema
 const categorySchema: Schema = new Schema(
   {
-    name: { 
-      type: String, 
-      required: [true, "Name is required"], 
+    name: {
+      type: String,
+      required: [true, "Name is required"],
       unique: true,
-      trim: true
+      trim: true,
     },
-    description: { 
-      type: String, 
+    description: {
+      type: String,
       required: [true, "Description is required"],
-      trim: true
+      trim: true,
     },
-    image: { 
-      type: String, 
+    image: {
+      type: String,
       required: [true, "Image URL is required"],
       validate: {
         validator: (value: string) => {
@@ -51,23 +51,25 @@ const categorySchema: Schema = new Schema(
             return false;
           }
         },
-        message: "Invalid image URL"
-      }
+        message: "Invalid image URL",
+      },
     },
     price: {
-      type: String, 
+      type: String,
       required: [true, "Price is required"],
     },
-    imagePublicId: { 
-      type: String, 
-      select: false // Don't return this field by default
+    imagePublicId: {
+      type: String,
+      select: false,
     },
-    subcategories: [{ 
-      type: Schema.Types.ObjectId, 
-      ref: "Subcategory" 
-    }]
+    subcategories: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "Subcategory",
+      },
+    ],
   },
-  { 
+  {
     timestamps: true,
     toJSON: {
       virtuals: true,
@@ -75,16 +77,16 @@ const categorySchema: Schema = new Schema(
         delete ret.__v;
         delete ret.imagePublicId;
         return ret;
-      }
+      },
     },
     toObject: {
-      virtuals: true
-    }
+      virtuals: true,
+    },
   }
 );
 
 // Index for better search performance
-categorySchema.index({ name: 1 });
+// categorySchema.index({ name: 1 });
 
 // Create and export the model
 export default mongoose.model<ICategory>("Category", categorySchema);

@@ -3,8 +3,8 @@ import path from "path"
 import fs from "fs"
 import type { Request } from "express"
 
-// Create uploads directory if it doesn't exist
-const uploadDir = path.join(process.cwd(), "uploads")
+// Use /tmp directory for file uploads (works in serverless)
+const uploadDir = path.join("/tmp", "uploads")
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true })
 }
@@ -23,7 +23,6 @@ const storage = multer.diskStorage({
 // File filter to accept only video files
 const fileFilter = (req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
   const allowedMimeTypes = ["video/mp4", "video/webm", "video/quicktime", "video/x-msvideo", "video/x-matroska"]
-
   if (allowedMimeTypes.includes(file.mimetype)) {
     cb(null, true)
   } else {
@@ -36,9 +35,8 @@ const videoUpload = multer({
   storage: storage,
   fileFilter: fileFilter,
   limits: {
-    fileSize: 500 * 1024 * 1024, // 500MB limit
+    fileSize: 500 * 1024 * 1024, // 500MB
   },
 })
 
 export default videoUpload
-

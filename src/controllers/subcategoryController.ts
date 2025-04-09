@@ -19,34 +19,45 @@ export const getSubcategories = async (req: Request, res: Response) => {
   }
 };
 // Create a new subcategory
-export const createSubcategory = async (req: Request, res: Response) => {
+export const createSubcategory = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const validatedData = SubcategorySchema.parse(req.body);
-    
-    const category = await Category.findById(validatedData.category);
-    if (!category) return res.status(404).json({ error: "Category not found" });
 
-    const existing = await Subcategory.findOne({ 
-      name: validatedData.name, 
-      category: validatedData.category 
+    const category = await Category.findById(validatedData.category);
+    if (!category) {
+      res.status(404).json({ error: "Category not found" });
+      return; // Prevent further code execution
+    }
+
+    const existing = await Subcategory.findOne({
+      name: validatedData.name,
+      category: validatedData.category,
     });
-    if (existing) return res.status(409).json({ error: "Subcategory already exists" });
+    if (existing) {
+      res.status(409).json({ error: "Subcategory already exists" });
+      return; // Prevent further code execution
+    }
 
     const subcategory = await Subcategory.create(validatedData);
-    
-    await Category.findByIdAndUpdate(validatedData.category, {
-      $push: { subcategories: subcategory._id }
-    }); 
 
-    res.status(201).json(subcategory);
+    await Category.findByIdAndUpdate(validatedData.category, {
+      $push: { subcategories: subcategory._id },
+    });
+
+    res.status(201).json(subcategory); // Send the response, don't return it
   } catch (error) {
     res.status(400).json({ error: "Invalid subcategory data" });
   }
 };
 
-
 // Get a single subcategory by ID
-export const getSubcategoryById = async (req: Request, res: Response) => {
+export const getSubcategoryById = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const subcategory = await Subcategory.findById(req.params.id).populate(
       "category",
@@ -54,20 +65,20 @@ export const getSubcategoryById = async (req: Request, res: Response) => {
     );
 
     if (!subcategory) {
-      return res.status(404).json({ error: "Subcategory not found" });
+      res.status(404).json({ error: "Subcategory not found" });
+      return; // Prevent further code execution
     }
 
-    res.status(200).json(subcategory);
+    res.status(200).json(subcategory); // Send the response, don't return it
   } catch (error) {
     res.status(500).json({ error: "Failed to fetch subcategory" });
   }
 };
-
 // Get videos for a subcategory
 export const getSubcategoryVideos = async (req: Request, res: Response) => {
   try {
-    const videos = await Video.find({ 
-      subcategory: req.params.id 
+    const videos = await Video.find({
+      subcategory: req.params.id,
     }).sort({ sequence: 1 });
     res.status(200).json(videos);
   } catch (error) {
@@ -75,11 +86,13 @@ export const getSubcategoryVideos = async (req: Request, res: Response) => {
   }
 };
 
-
 // optional
 
 // Update a subcategory
-export const updateSubcategory = async (req: Request, res: Response) => {
+export const updateSubcategory = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     // Validate input using Zod
     const validatedData = SubcategorySchema.parse(req.body);
@@ -88,7 +101,8 @@ export const updateSubcategory = async (req: Request, res: Response) => {
     if (validatedData.category) {
       const category = await Category.findById(validatedData.category);
       if (!category) {
-        return res.status(404).json({ error: "Category not found" });
+        res.status(404).json({ error: "Category not found" });
+        return; // Prevent further code execution
       }
     }
 
@@ -100,42 +114,49 @@ export const updateSubcategory = async (req: Request, res: Response) => {
     );
 
     if (!subcategory) {
-      return res.status(404).json({ error: "Subcategory not found" });
+      res.status(404).json({ error: "Subcategory not found" });
+      return; // Prevent further code execution
     }
 
-    res.status(200).json(subcategory);
+    res.status(200).json(subcategory); // Send the response, don't return it
   } catch (error) {
     console.error("Error updating subcategory:", error);
 
     // Handle Zod validation error
     if (error instanceof ZodError) {
-      return res.status(400).json({ error: error.flatten() });
+      res.status(400).json({ error: error.flatten() });
+      return; // Prevent further code execution
     }
 
     // Handle Mongoose validation error
     if (error instanceof mongoose.Error.ValidationError) {
-      return res.status(400).json({ error: error.errors });
+      res.status(400).json({ error: error.errors });
+      return; // Prevent further code execution
     }
 
     res.status(500).json({ error: "Failed to update subcategory" });
   }
 };
-
 // Delete a subcategory
-export const deleteSubcategory = async (req: Request, res: Response) => {
+export const deleteSubcategory = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     // Check if subcategory has videos
     const videos = await Video.find({ subcategory: req.params.id });
     if (videos.length > 0) {
-      return res.status(400).json({
+      res.status(400).json({
         error: "Cannot delete subcategory with videos. Delete videos first.",
       });
+      return; // Prevent further code execution
     }
 
     // First get the subcategory to know which category it belongs to
     const subcategory = await Subcategory.findById(req.params.id);
     if (!subcategory) {
-      return res.status(404).json({ error: "Subcategory not found" });
+      res.status(404).json({ error: "Subcategory not found" });
+      return; // Prevent further code execution
     }
 
     // Delete subcategory
@@ -143,17 +164,15 @@ export const deleteSubcategory = async (req: Request, res: Response) => {
 
     // Remove subcategory reference from its category
     await Category.findByIdAndUpdate(subcategory.category, {
-      $pull: { subcategories: req.params.id }
+      $pull: { subcategories: req.params.id },
     });
 
-    res.status(200).json({ message: "Subcategory deleted successfully" });
+    res.status(200).json({ message: "Subcategory deleted successfully" }); // Send the response, don't return it
   } catch (error) {
     console.error("Error deleting subcategory:", error);
     res.status(500).json({ error: "Failed to delete subcategory" });
   }
 };
-
-
 
 export const checkDuplicate = async (req: Request, res: Response) => {
   try {

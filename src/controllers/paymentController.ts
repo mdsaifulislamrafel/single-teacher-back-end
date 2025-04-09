@@ -1,24 +1,68 @@
 import type { Request, Response } from "express";
 import Payment, { PaymentSchema } from "../models/Payment";
 import User from "../models/User";
+import { z } from "zod";
 
 
+// Create Payment
+export const createPayment = async (req: Request, res: Response): Promise<void> => {
+  try {
+    console.log("Incoming request body:", req.body);
 
-export const getPayments = async (req: Request, res: Response) => {
+    // Validate input
+    const validatedData = PaymentSchema.parse(req.body);
+
+    // Check if payment already exists for the same itemId and user
+    const isExistData = await Payment.findOne({
+      itemId: validatedData.itemId,
+      user: validatedData.user,
+    });
+
+    if (isExistData) {
+      res.status(409).json({
+        error: "You have already submitted a payment for this item.",
+      });
+      return;
+    }
+
+    // Check if user exists
+    const user = await User.findById(validatedData.user);
+    if (!user) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+
+    // Create payment
+    const payment = await Payment.create(validatedData);
+
+    res.status(201).json(payment);
+  } catch (error) {
+    console.error("Error creating payment:", error);
+
+    if (error instanceof Error) {
+      res.status(400).json({ error: error.message });
+      return;
+    }
+
+    res.status(500).json({ error: "Failed to create payment" });
+  }
+};
+
+// Get Payments
+export const getPayments = async (req: Request, res: Response): Promise<void> => {
   try {
     const payments = await Payment.find()
-      .populate("user", "name email") // Populate user
+      .populate("user", "name email")
       .sort({ createdAt: -1 });
 
     if (!payments || payments.length === 0) {
-      return res.status(404).json({ error: "Payments not found" });
+      res.status(404).json({ error: "Payments not found" });
+      return;
     }
 
-    // আলাদা ভাবে course এবং pdf এর জন্য populate
     const populatedPayments = await Promise.all(
       payments.map(async (payment) => {
         if (payment.itemType === "course") {
-          // Populate course -> subcategories -> videos
           const populatedCourse = await Payment.populate(payment, {
             path: "itemId",
             model: "Category",
@@ -33,7 +77,6 @@ export const getPayments = async (req: Request, res: Response) => {
           });
           return populatedCourse;
         } else if (payment.itemType === "pdf") {
-          // Populate pdf document only
           const populatedPdf = await Payment.populate(payment, {
             path: "itemId",
             model: "Pdf",
@@ -52,23 +95,20 @@ export const getPayments = async (req: Request, res: Response) => {
   }
 };
 
-
-// single user data all
-
-export const getPaymentById = async (req: Request, res: Response) => {
+// Get Payment by ID
+export const getPaymentById = async (req: Request, res: Response): Promise<void> => {
   try {
     const payments = await Payment.find({ user: req.params.id })
-      .populate("user", "name email") // Populate user
+      .populate("user", "name email");
 
     if (!payments || payments.length === 0) {
-      return res.status(404).json({ error: "Payment not found" });
+      res.status(404).json({ error: "Payment not found" });
+      return;
     }
 
-    // আলাদা ভাবে course এবং pdf এর জন্য populate
     const populatedPayments = await Promise.all(
       payments.map(async (payment) => {
         if (payment.itemType === "course") {
-          // Populate course -> subcategories -> videos
           const populatedCourse = await Payment.populate(payment, {
             path: "itemId",
             model: "Category",
@@ -83,7 +123,6 @@ export const getPaymentById = async (req: Request, res: Response) => {
           });
           return populatedCourse;
         } else if (payment.itemType === "pdf") {
-          // Populate pdf document only
           const populatedPdf = await Payment.populate(payment, {
             path: "itemId",
             model: "Pdf",
@@ -103,59 +142,17 @@ export const getPaymentById = async (req: Request, res: Response) => {
 };
 
 
-
-export const createPayment = async (req: Request, res: Response) => {
-  try {
-    console.log("Incoming request body:", req.body);
-
-    // Validate input
-    const validatedData = PaymentSchema.parse(req.body);
-
-    // Check if payment already exists for the same itemId and user
-    const isExistData = await Payment.findOne({
-      itemId: validatedData.itemId,
-      user: validatedData.user,
-    });
-
-    if (isExistData) {
-      return res.status(409).json({
-        error: "You have already submitted a payment for this item.",
-      });
-    }
-
-    // Check if user exists
-    const user = await User.findById(validatedData.user);
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    // Create payment
-    const payment = await Payment.create(validatedData);
-
-    res.status(201).json(payment);
-  } catch (error) {
-    console.error("Error creating payment:", error);
-
-    if (error instanceof Error) {
-      return res.status(400).json({ error: error.message });
-    }
-
-    res.status(500).json({ error: "Failed to create payment" });
-  }
-};
-
-
-// Update payment status
 // controllers/paymentController.ts
-import { z } from "zod";
+
 
 // Optional: Validate incoming body with Zod
 const updatePaymentStatusSchema = z.object({
   status: z.enum(["pending", "approved", "rejected"]),
 });
 
-// ✅ Update Payment Status Controller
-export const updatePaymentStatus = async (req: Request, res: Response) => {
+
+// Update Payment Status
+export const updatePaymentStatus = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
 
@@ -163,10 +160,11 @@ export const updatePaymentStatus = async (req: Request, res: Response) => {
     const parseResult = updatePaymentStatusSchema.safeParse(req.body);
 
     if (!parseResult.success) {
-      return res.status(400).json({
+      res.status(400).json({
         error: "Invalid status. Must be one of: pending, approved, or rejected",
         issues: parseResult.error.issues,
       });
+      return;
     }
 
     const { status } = parseResult.data;
@@ -175,7 +173,8 @@ export const updatePaymentStatus = async (req: Request, res: Response) => {
     const payment = await Payment.findById(id);
 
     if (!payment) {
-      return res.status(404).json({ error: "Payment not found" });
+      res.status(404).json({ error: "Payment not found" });
+      return;
     }
 
     // Update the status
@@ -191,3 +190,8 @@ export const updatePaymentStatus = async (req: Request, res: Response) => {
     res.status(500).json({ error: "Failed to update payment status" });
   }
 };
+
+
+// Update payment status
+
+// ✅ Update Payment Status Controller

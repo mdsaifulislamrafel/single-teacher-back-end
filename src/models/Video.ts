@@ -8,6 +8,7 @@ export const VideoSchema = z.object({
   duration: z.number().positive(),
   subcategory: z.string().min(1, { message: "Subcategory ID is required" }),
   playbackInfo: z.string().optional(),
+  // isPlaying: z.boolean().default(false),
 });
 
 export type VideoInput = z.infer<typeof VideoSchema>;
@@ -21,6 +22,7 @@ export interface IVideo extends Document {
   playbackInfo?: string;
   createdAt: Date;
   updatedAt: Date;
+  // isPlaying: boolean;
 }
 
 const videoSchema: Schema = new Schema(
@@ -31,6 +33,7 @@ const videoSchema: Schema = new Schema(
     duration: { type: Number, required: true, default: 0 },
     subcategory: { type: Schema.Types.ObjectId, ref: "Subcategory", required: true },
     playbackInfo: { type: String },
+    // isPlaying: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

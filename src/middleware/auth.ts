@@ -14,35 +14,40 @@ declare global {
 }
 
 // Middleware to authenticate user
-export const authenticate = (req: Request, res: Response, next: NextFunction) => {
+export const authenticate = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void => {
   try {
     // Get token from header
-    const authHeader = req.headers.authorization
+    const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return res.status(401).json({ error: "Authentication required" })
+      res.status(401).json({ error: "Authentication required" });
+      return;
     }
 
-    const token = authHeader.split(" ")[1]
+    const token = authHeader.split(" ")[1];
 
     // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as {
-      id: string
-      role: string
-    }
+      id: string;
+      role: string;
+    };
 
     // Add user to request
     req.user = {
       id: decoded.id,
       role: decoded.role,
-    }
+    };
 
-    next()
+    next();
   } catch (error) {
-    console.error("Authentication error:", error)
-    res.status(401).json({ error: "Invalid or expired token" })
+    console.error("Authentication error:", error);
+    res.status(401).json({ error: "Invalid or expired token" });
   }
-}
+};
 
 // Middleware to authorize based on roles
 export const authorize = (roles: string[]) => {
@@ -60,11 +65,11 @@ export const authorize = (roles: string[]) => {
 }
 
 // Middleware to check if user is admin
-export const isAdmin = (req: Request, res: Response, next: NextFunction) => {
-  if (req.user.role !== "admin") {
-    return res.status(403).json({ error: "Admin access required" })
+export const isAdmin = (req: Request, res: Response, next: NextFunction): void => {
+  if (!req.user || req.user.role !== "admin") {
+    res.status(403).json({ error: "Admin access required" });
+    return; // ✅ Explicitly return to satisfy TypeScript
   }
 
-  next()
-}
-
+  next(); // Continue to next middleware if admin
+};

@@ -9,6 +9,7 @@ import {
   getUserPayments,
 } from "../controllers/userController"
 import { authenticate, isAdmin } from "../middleware/auth"
+import upload from "../middleware/upload"
 
 const router = express.Router()
 
@@ -40,8 +41,10 @@ router.put(
     }
     res.status(403).json({ error: "Unauthorized" })
   },
+  upload.single("avatar"), // ফিল্ড নাম "avatar" রাখা হয়েছে
   updateUser,
 )
+
 
 router.get(
   "/:id/courses",
