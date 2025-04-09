@@ -71,10 +71,8 @@ const updateUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         // Handle profile picture upload
         if (req.file) {
             try {
-                console.log("Processing file upload:", req.file);
                 // Delete previous avatar from cloudinary if exists
                 if (user.avatar && user.avatar.public_id) {
-                    console.log("Deleting previous avatar:", user.avatar.public_id);
                     yield cloudinary_1.default.uploader.destroy(user.avatar.public_id);
                 }
                 // Set new avatar
