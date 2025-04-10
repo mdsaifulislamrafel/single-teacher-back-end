@@ -29,7 +29,6 @@ const userSchema = new mongoose_1.Schema({
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     role: { type: String, enum: ["user", "admin"], default: "user" },
-    googleId: { type: String },
     avatar: {
         public_id: String,
         url: String,
@@ -43,7 +42,7 @@ userSchema.pre("save", function (next) {
         if (!this.isModified("password"))
             return next();
         try {
-            const salt = yield bcryptjs_1.default.genSalt(12);
+            const salt = yield bcryptjs_1.default.genSalt(10);
             this.password = yield bcryptjs_1.default.hash(this.password, salt);
             next();
         }

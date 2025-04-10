@@ -45,12 +45,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getCurrentUser = exports.login = exports.register = void 0;
+exports.logout = exports.logoutAllDevices = exports.getCurrentUser = exports.login = exports.register = void 0;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const zod_1 = require("zod");
 const User_1 = __importStar(require("../models/User"));
+const UserSession_1 = __importDefault(require("../models/UserSession"));
 const fs_1 = __importDefault(require("fs"));
 const cloudinary_1 = __importDefault(require("../config/cloudinary"));
+const deviceInfo_1 = require("../utils/deviceInfo");
 // Helper function to generate JWT token
 const generateToken = (id, role) => {
     return jsonwebtoken_1.default.sign({ id, role }, process.env.JWT_SECRET, {
@@ -100,6 +102,14 @@ const register = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         });
         // Generate token
         const token = generateToken(user._id.toString(), user.role);
+        // Create a new session
+        const deviceInfo = (0, deviceInfo_1.getDeviceInfo)(req);
+        yield UserSession_1.default.create({
+            userId: user._id,
+            token,
+            deviceInfo,
+            isActive: true,
+        });
         res.status(201).json({
             token,
             user: {
@@ -130,6 +140,7 @@ const register = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
 exports.register = register;
 // Login user
 const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     try {
         const { email, password } = req.body;
         if (!email || !password) {
@@ -148,8 +159,30 @@ const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             res.status(401).json({ error: "Invalid credentials" });
             return;
         }
+        // Check if user already has an active session
+        const existingSession = yield UserSession_1.default.findOne({
+            userId: user._id,
+            isActive: true,
+        });
+        if (existingSession) {
+            // User already has an active session
+            res.status(200).json({
+                hasActiveSession: true,
+                userId: user._id.toString(),
+                message: "You are already logged in on another device",
+            });
+            return;
+        }
         // Generate token
         const token = generateToken(user._id.toString(), user.role);
+        // Create a new session
+        const deviceInfo = (0, deviceInfo_1.getDeviceInfo)(req);
+        yield UserSession_1.default.create({
+            userId: user._id,
+            token,
+            deviceInfo,
+            isActive: true,
+        });
         res.status(200).json({
             token,
             user: {
@@ -157,6 +190,7 @@ const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                 name: user.name,
                 email: user.email,
                 role: user.role,
+                avatar: (_a = user.avatar) === null || _a === void 0 ? void 0 : _a.url,
             },
         });
     }
@@ -182,3 +216,40 @@ const getCurrentUser = (req, res) => __awaiter(void 0, void 0, void 0, function*
     }
 });
 exports.getCurrentUser = getCurrentUser;
+// Logout from all devices
+const logoutAllDevices = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { userId } = req.body;
+        if (!userId) {
+            res.status(400).json({ error: "User ID is required" });
+            return;
+        }
+        // Deactivate all sessions for this user
+        yield UserSession_1.default.updateMany({ userId, isActive: true }, { isActive: false });
+        res.status(200).json({ success: true, message: "Logged out from all devices" });
+    }
+    catch (error) {
+        console.error("Error logging out from all devices:", error);
+        res.status(500).json({ error: "Failed to logout from all devices" });
+    }
+});
+exports.logoutAllDevices = logoutAllDevices;
+// Logout current session
+const logout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    try {
+        const token = (_a = req.headers.authorization) === null || _a === void 0 ? void 0 : _a.split(" ")[1];
+        if (!token) {
+            res.status(400).json({ error: "Token is required" });
+            return;
+        }
+        // Deactivate the current session
+        yield UserSession_1.default.findOneAndUpdate({ token, isActive: true }, { isActive: false });
+        res.status(200).json({ success: true, message: "Logged out successfully" });
+    }
+    catch (error) {
+        console.error("Error logging out:", error);
+        res.status(500).json({ error: "Failed to logout" });
+    }
+});
+exports.logout = logout;
