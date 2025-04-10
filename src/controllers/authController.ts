@@ -224,3 +224,17 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
     res.status(500).json({ error: "Failed to logout" })
   }
 }
+
+export  const singleDevice = async (req: Request, res: Response): Promise<void> => {
+  const { id } = req.params;
+  try {
+    const deviceInfo = await UserSession.findOne({userId: id, isActive: true}).populate("userId", "-password");
+    if (!deviceInfo) {
+      res.status(404).json({ message: "Device not found" });
+      return 
+    }
+    res.status(200).json(deviceInfo);
+  } catch (error) {
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
