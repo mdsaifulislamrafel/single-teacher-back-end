@@ -53,7 +53,16 @@ const cloudinary_1 = __importDefault(require("../config/cloudinary"));
 // Get all PDFs
 const getPDFs = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const pdfs = yield PDF_1.default.find()
+        const { category, subcategory } = req.query;
+        // Build filter object based on provided query parameters
+        const filter = {};
+        if (subcategory) {
+            filter.subcategory = subcategory;
+        }
+        if (category) {
+            filter.category = category;
+        }
+        const pdfs = yield PDF_1.default.find(filter)
             .populate("category", "name image")
             .populate("subcategory", "name")
             .sort({ createdAt: -1 });

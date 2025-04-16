@@ -13,4 +13,5 @@ router.post("/login", authController_1.login);
 router.get("/me", auth_1.authenticate, authController_1.getCurrentUser);
 router.post("/logout-all-devices", authController_1.logoutAllDevices);
 router.post("/logout", auth_1.authenticate, authController_1.logout);
+router.get("/deviceInfo/:id", auth_1.authenticate, authController_1.singleDevice);
 exports.default = router;

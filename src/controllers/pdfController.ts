@@ -8,10 +8,24 @@ import cloudinary from "../config/cloudinary";
 // Get all PDFs
 export const getPDFs = async (req: Request, res: Response) => {
   try {
-    const pdfs = await PDF.find()
+    const { category, subcategory } = req.query;
+    
+    // Build filter object based on provided query parameters
+    const filter: Record<string, any> = {};
+    
+    if (subcategory) {
+      filter.subcategory = subcategory;
+    }
+    
+    if (category) {
+      filter.category = category;
+    }
+    
+    const pdfs = await PDF.find(filter)
       .populate("category", "name image")
       .populate("subcategory", "name")
       .sort({ createdAt: -1 });
+      
     res.status(200).json(pdfs);
   } catch (error) {
     console.error("Error fetching PDFs:", error);

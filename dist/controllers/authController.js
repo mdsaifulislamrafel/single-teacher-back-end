@@ -45,7 +45,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.logout = exports.logoutAllDevices = exports.getCurrentUser = exports.login = exports.register = void 0;
+exports.singleDevice = exports.logout = exports.logoutAllDevices = exports.getCurrentUser = exports.login = exports.register = void 0;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const zod_1 = require("zod");
 const User_1 = __importStar(require("../models/User"));
@@ -253,3 +253,18 @@ const logout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     }
 });
 exports.logout = logout;
+const singleDevice = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { id } = req.params;
+    try {
+        const deviceInfo = yield UserSession_1.default.findOne({ userId: id, isActive: true }).populate("userId", "-password");
+        if (!deviceInfo) {
+            res.status(404).json({ message: "Device not found" });
+            return;
+        }
+        res.status(200).json(deviceInfo);
+    }
+    catch (error) {
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
+exports.singleDevice = singleDevice;
