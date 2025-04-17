@@ -315,7 +315,7 @@ export const forgotPassword = async (
     await user.save();
 
     // Create reset URL - send the unhashed token to the user
-    const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
+    const resetUrl = `${process.env.FRONTEND_URL || "https://single-teacher.netlify.app"}/reset-password/${resetToken}`;
 
     // Email options
     const mailOptions = {
