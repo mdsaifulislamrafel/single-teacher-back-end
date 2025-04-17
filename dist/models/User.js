@@ -20,7 +20,9 @@ const zod_1 = require("zod");
 exports.UserSchema = zod_1.z.object({
     name: zod_1.z.string().min(2, { message: "Name must be at least 2 characters" }),
     email: zod_1.z.string().email({ message: "Invalid email address" }),
-    password: zod_1.z.string().min(8, { message: "Password must be at least 8 characters" }),
+    password: zod_1.z
+        .string()
+        .min(8, { message: "Password must be at least 8 characters" }),
     role: zod_1.z.enum(["user", "admin"]).default("user"),
 });
 // Mongoose schema definition
@@ -33,6 +35,8 @@ const userSchema = new mongoose_1.Schema({
         public_id: String,
         url: String,
     },
+    resetPasswordToken: String,
+    resetPasswordExpire: Date,
 }, {
     timestamps: true,
 });

@@ -1,9 +1,4 @@
-import mongoose, {
-  Schema,
-  Document,
-  Types,
-  model,
-} from "mongoose";
+import mongoose, { Schema, Document, Types, model } from "mongoose";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 
@@ -11,7 +6,9 @@ import { z } from "zod";
 export const UserSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters" }),
   email: z.string().email({ message: "Invalid email address" }),
-  password: z.string().min(8, { message: "Password must be at least 8 characters" }),
+  password: z
+    .string()
+    .min(8, { message: "Password must be at least 8 characters" }),
   role: z.enum(["user", "admin"]).default("user"),
 });
 
@@ -28,6 +25,8 @@ export interface IUser extends Document {
     public_id: string;
     url: string;
   };
+  resetPasswordToken: String;
+  resetPasswordExpire: Date;
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -45,6 +44,8 @@ const userSchema = new Schema<IUser>(
       public_id: String,
       url: String,
     },
+    resetPasswordToken: String,
+    resetPasswordExpire: Date,
   },
   {
     timestamps: true,

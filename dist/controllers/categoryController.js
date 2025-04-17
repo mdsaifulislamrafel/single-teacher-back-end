@@ -168,25 +168,27 @@ exports.updateCategory = updateCategory;
 // Delete a category
 const deleteCategory = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        // Check if category has subcategories
+        // Check if category exists first
+        const existingCategory = yield Category_1.default.findById(req.params.id);
+        if (!existingCategory) {
+            res.status(404).json({ error: "Category not found" });
+            return;
+        }
+        // Then check for subcategories
         const subcategories = yield Subcategory_1.default.find({ category: req.params.id });
         if (subcategories.length > 0) {
             res.status(400).json({
                 error: "Cannot delete category with subcategories. Delete subcategories first.",
             });
-            return; // Ensure we return after sending a response
+            return;
         }
         // Delete category
-        const category = yield Category_1.default.findByIdAndDelete(req.params.id);
-        if (!category) {
-            res.status(404).json({ error: "Category not found" });
-            return; // Ensure we return after sending a response
-        }
+        yield Category_1.default.findByIdAndDelete(req.params.id);
         res.status(200).json({ message: "Category deleted successfully" });
     }
     catch (error) {
         console.error("Error deleting category:", error);
-        res.status(500).json({ error: "Failed to delete category" });
+        res.status(500).json({ error: "Internal server error" });
     }
 });
 exports.deleteCategory = deleteCategory;

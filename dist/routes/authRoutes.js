@@ -14,4 +14,9 @@ router.get("/me", auth_1.authenticate, authController_1.getCurrentUser);
 router.post("/logout-all-devices", authController_1.logoutAllDevices);
 router.post("/logout", auth_1.authenticate, authController_1.logout);
 router.get("/deviceInfo/:id", auth_1.authenticate, authController_1.singleDevice);
+// In your authRoutes.ts
+router.post("/forgot-password", authController_1.forgotPassword);
+router.put("/reset-password/:token", authController_1.resetPassword);
+router.get('/validate-reset-token/:token', authController_1.validateResetToken);
+router.post("/google", authController_1.googleAuth);
 exports.default = router;
