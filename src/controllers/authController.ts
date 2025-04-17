@@ -9,7 +9,6 @@ import { getDeviceInfo } from "../utils/deviceInfo";
 import crypto from "crypto";
 import nodemailer from "nodemailer";
 import { OAuth2Client } from 'google-auth-library';
-import axios from "axios";
 
 // Helper function to generate JWT token
 const generateToken = (id: string, role: string) => {
