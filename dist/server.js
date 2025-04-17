@@ -36,8 +36,8 @@ const PORT = process.env.PORT || 5000;
 app.use(express_1.default.urlencoded({ extended: true }));
 app.use(express_1.default.json());
 app.use((0, cors_1.default)({
-    origin: ["https://single-teacher.netlify.app", "http://localhost:5173"],
-    // origin: "https://single-teacher.netlify.app",
+    // origin: [ "https://single-teacher.netlify.app","http://localhost:5173"],
+    origin: "https://single-teacher.netlify.app",
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
     credentials: true,
 }));

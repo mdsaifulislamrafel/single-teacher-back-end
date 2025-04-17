@@ -315,7 +315,8 @@ const forgotPassword = (req, res) => __awaiter(void 0, void 0, void 0, function*
         user.resetPasswordExpire = resetPasswordExpire;
         yield user.save();
         // Create reset URL - send the unhashed token to the user
-        const resetUrl = `${process.env.FRONTEND_URL || "https://single-teacher.netlify.app"}/reset-password/${resetToken}`;
+        // const resetUrl = `${process.env.FRONTEND_URL || "https://single-teacher.netlify.app"}/reset-password/${resetToken}`;
+        const resetUrl = `https://single-teacher.netlify.app/reset-password/${resetToken}`;
         // Email options
         const mailOptions = {
             from: `"${process.env.APP_NAME || "Your App"}" <${process.env.EMAIL_USER}>`,
