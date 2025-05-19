@@ -26,8 +26,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
 app.use(cors({
-  // origin: [ "https://single-teacher.netlify.app","http://localhost:5173"],
-  origin: "https://single-teacher.netlify.app",
+  origin: [ "https://single-teacher.netlify.app","http://localhost:5173"],
+  // origin: "https://single-teacher.netlify.app",
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
   credentials: true,
 }));
