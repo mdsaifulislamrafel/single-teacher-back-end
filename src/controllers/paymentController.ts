@@ -7,7 +7,6 @@ import { z } from "zod";
 // Create Payment
 export const createPayment = async (req: Request, res: Response): Promise<void> => {
   try {
-    console.log("Incoming request body:", req.body);
 
     // Validate input
     const validatedData = PaymentSchema.parse(req.body);

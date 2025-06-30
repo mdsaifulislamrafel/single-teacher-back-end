@@ -14,6 +14,7 @@ import userRoutes from "./routes/userRoutes";
 import authRoutes from "./routes/authRoutes";
 import paymentRoutes from "./routes/paymentRoutes";
 import uploadRoutes from "./routes/uploadRoutes";
+import bookRoutes from "./routes/bookRoutes";
 
 // Load env
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
@@ -44,6 +45,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/upload", uploadRoutes);
+app.use("/api/books", bookRoutes);
 
 // Health check
 app.get("/", (_req, res) => {

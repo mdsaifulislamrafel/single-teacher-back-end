@@ -1,3 +1,4 @@
+import { string } from "joi";
 import mongoose, { Schema, type Document } from "mongoose";
 import { z } from "zod";
 
@@ -16,7 +17,13 @@ export const PaymentSchema = z.object({
   status: z.enum(["pending", "approved", "rejected"]).default("pending"),
   transactionId: z.string().optional(), // ✅ optional
   user: z.string(),
-  itemType: z.enum(["course", "pdf"]),
+  itemType: z.enum(["course", "pdf", "book"]),
+  shippingInfo: z.object({
+    name: z.string().min(3),
+    address: z.string().min(10),
+    city: z.string().min(2),
+    phone: z.string().regex(/^(?:\+88|01)?\d{11}$/, "Invalid Bangladeshi phone number")
+  }).optional()
 });
 
 export type PaymentInput = z.infer<typeof PaymentSchema>;
@@ -35,7 +42,13 @@ export interface IPayment extends Document {
   status: "pending" | "approved" | "rejected";
   transactionId?: string;
   user: mongoose.Types.ObjectId;
-  itemType: "course" | "pdf";
+  itemType: "course" | "pdf" | "book";
+  shippingInfo?: {
+    name: string;
+    address: string;
+    city: string;
+    phone: string;
+  };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -84,9 +97,18 @@ const paymentSchema: Schema = new Schema(
     },
     itemType: {
       type: String,
-      enum: ["course", "pdf"],
+      enum: ["course", "pdf", "book"],
       required: true,
     },
+   shippingInfo: {
+      type: {
+        name: String,
+        address: String,
+        city: String,
+        phone: String
+      },
+      required: false
+    }
   },
   {
     timestamps: true,
