@@ -15,6 +15,7 @@ import authRoutes from "./routes/authRoutes";
 import paymentRoutes from "./routes/paymentRoutes";
 import uploadRoutes from "./routes/uploadRoutes";
 import bookRoutes from "./routes/bookRoutes";
+import supportRouters from "./routes/supportRoutes";
 
 // Load env
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
@@ -27,7 +28,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
 app.use(cors({
-  origin: [ "https://single-teacher.netlify.app","http://localhost:5173"],
+  origin: [ "https://single-teacher.netlify.app","https://single.alokshikha.com", "http://localhost:5173"],
   // origin: "https://single-teacher.netlify.app",
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
   credentials: true,
@@ -46,6 +47,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/books", bookRoutes);
+app.use("/api/support", supportRouters);
 
 // Health check
 app.get("/", (_req, res) => {
