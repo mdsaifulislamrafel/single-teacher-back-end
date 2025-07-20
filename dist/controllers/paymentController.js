@@ -52,7 +52,6 @@ const zod_1 = require("zod");
 // Create Payment
 const createPayment = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        console.log("Incoming request body:", req.body);
         // Validate input
         const validatedData = Payment_1.PaymentSchema.parse(req.body);
         // Check if payment already exists for the same itemId and user

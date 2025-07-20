@@ -27,6 +27,8 @@ const userRoutes_1 = __importDefault(require("./routes/userRoutes"));
 const authRoutes_1 = __importDefault(require("./routes/authRoutes"));
 const paymentRoutes_1 = __importDefault(require("./routes/paymentRoutes"));
 const uploadRoutes_1 = __importDefault(require("./routes/uploadRoutes"));
+const bookRoutes_1 = __importDefault(require("./routes/bookRoutes"));
+const supportRoutes_1 = __importDefault(require("./routes/supportRoutes"));
 // Load env
 dotenv_1.default.config({ path: path_1.default.resolve(__dirname, "../.env") });
 // Express setup
@@ -36,8 +38,7 @@ const PORT = process.env.PORT || 5000;
 app.use(express_1.default.urlencoded({ extended: true }));
 app.use(express_1.default.json());
 app.use((0, cors_1.default)({
-    // origin: [ "https://single-teacher.netlify.app","http://localhost:5173"],
-    origin: "https://single-teacher.netlify.app",
+    origin: ["https://single-teacher.netlify.app", "https://single.alokshikha.com", "http://localhost:5173"],
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
     credentials: true,
 }));
@@ -52,6 +53,8 @@ app.use("/api/users", userRoutes_1.default);
 app.use("/api/auth", authRoutes_1.default);
 app.use("/api/payments", paymentRoutes_1.default);
 app.use("/api/upload", uploadRoutes_1.default);
+app.use("/api/books", bookRoutes_1.default);
+app.use("/api/support", supportRoutes_1.default);
 // Health check
 app.get("/", (_req, res) => {
     res.status(200).json({ status: "Single teacher server is raining" });

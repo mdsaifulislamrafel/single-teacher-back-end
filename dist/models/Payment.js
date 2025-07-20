@@ -51,7 +51,13 @@ exports.PaymentSchema = zod_1.z.object({
     status: zod_1.z.enum(["pending", "approved", "rejected"]).default("pending"),
     transactionId: zod_1.z.string().optional(), // ✅ optional
     user: zod_1.z.string(),
-    itemType: zod_1.z.enum(["course", "pdf"]),
+    itemType: zod_1.z.enum(["course", "pdf", "book"]),
+    shippingInfo: zod_1.z.object({
+        name: zod_1.z.string().min(3),
+        address: zod_1.z.string().min(10),
+        city: zod_1.z.string().min(2),
+        phone: zod_1.z.string().regex(/^(?:\+88|01)?\d{11}$/, "Invalid Bangladeshi phone number")
+    }).optional()
 });
 // Mongoose Schema
 const paymentSchema = new mongoose_1.Schema({
@@ -96,9 +102,18 @@ const paymentSchema = new mongoose_1.Schema({
     },
     itemType: {
         type: String,
-        enum: ["course", "pdf"],
+        enum: ["course", "pdf", "book"],
         required: true,
     },
+    shippingInfo: {
+        type: {
+            name: String,
+            address: String,
+            city: String,
+            phone: String
+        },
+        required: false
+    }
 }, {
     timestamps: true,
 });
